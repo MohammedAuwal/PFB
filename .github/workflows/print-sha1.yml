@@ -1,0 +1,38 @@
+name: Print Android SHA1
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sha1:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate debug keystore and print SHA1
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.android
+
+          keytool -genkeypair \
+            -v \
+            -storetype PKCS12 \
+            -keystore ~/.android/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" || true
+
+          echo "=============================="
+          echo "ANDROID DEBUG KEYSTORE SHA1"
+          echo "=============================="
+
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android | grep -E "SHA1:|SHA-1:"

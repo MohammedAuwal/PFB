@@ -1,0 +1,72 @@
+name: Build and Deploy Flutter Web
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (latest stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Enable Flutter Web
+        run: flutter config --enable-web
+
+      - name: Generate web folder (if missing)
+        run: |
+          set -euo pipefail
+          if [ ! -d "web" ] || [ ! -f "web/index.html" ]; then
+            rm -rf tmp_web web
+            flutter create --platforms web --project-name pfb tmp_web
+            mv tmp_web/web ./web
+            rm -rf tmp_web
+          fi
+
+      # IMPORTANT: make sure assets referenced in pubspec.yaml exist
+      - name: Ensure required assets exist
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          mkdir -p assets/images
+
+          # If icon.png is not committed, download it (same as Android workflow)
+          if [ ! -f assets/icon.png ]; then
+            echo "assets/icon.png missing. Downloading..."
+            GDRIVE_FILE_ID="14So0qV9rf_iUs9FoWMUKTb9sBC61UrAB"
+            curl -L "https://drive.google.com/uc?export=download&id=${GDRIVE_FILE_ID}" -o assets/icon.png
+          fi
+
+          # Ensure icon_foreground exists too
+          if [ ! -f assets/icon_foreground.png ]; then
+            cp assets/icon.png assets/icon_foreground.png
+          fi
+
+          ls -la assets || true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          channelId: live
+          projectId: ismailtex-f070d
+          firebaseHostingSite: ismailtexs

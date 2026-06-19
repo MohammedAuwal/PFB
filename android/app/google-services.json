@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1089917254734",
+    "project_id": "phlakesfabric",
+    "storage_bucket": "phlakesfabric.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1089917254734:android:d791dca74fb3e77e4a571f",
+        "android_client_info": {
+          "package_name": "com.pfb.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-wnlmBUr8c1kny07uB5jGqdwGq5-GIDc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

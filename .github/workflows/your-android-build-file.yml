@@ -63,10 +63,10 @@ jobs:
           fi
           echo "✅ Asset directories ready"
 
-   # ================================================================
+      # ================================================================
       # STEP 3: Download icons from Google Drive
       # ================================================================
-    - name: Download icon assets
+      - name: Download icon assets
         run: |
           set -euo pipefail
 
@@ -85,7 +85,9 @@ jobs:
           cp "$OUTPUT" assets/icon_foreground.png
 
 
-          echo "✅ Icon downloaded successfully"    # ================================================================
+          echo "✅ Icon downloaded successfully"
+
+      # ================================================================
       # STEP 4: Flutter pub get
       # ================================================================
       - name: Flutter pub get
@@ -167,23 +169,3 @@ jobs:
           set -euo pipefail
           flutter build apk \
             --release \
-            --no-tree-shake-icons \
-            --android-skip-build-dependency-validation
-
-          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
-          if [ ! -f "$APK_PATH" ]; then
-            echo "❌ FATAL: Release APK was not created!"
-            exit 1
-          fi
-          echo "✅ Release APK built successfully!"
-
-      # ================================================================
-      # STEP 11: Upload APK artifact
-      # ================================================================
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-          retention-days: 30

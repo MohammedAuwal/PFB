@@ -36,7 +36,7 @@ jobs:
           fi
 
       # IMPORTANT: make sure assets referenced in pubspec.yaml exist
-      - name: Ensure required assets exist
+    - name: Ensure required assets exist
         run: |
           set -euo pipefail
           mkdir -p assets
@@ -45,7 +45,7 @@ jobs:
           # If icon.png is not committed, download it (same as Android workflow)
           if [ ! -f assets/icon.png ]; then
             echo "assets/icon.png missing. Downloading..."
-            GDRIVE_FILE_ID="14So0qV9rf_iUs9FoWMUKTb9sBC61UrAB"
+            GDRIVE_FILE_ID="1zJ3CQ8PrTaYs5Z4feJV2D6PL3t4CK3vx"
             curl -L "https://drive.google.com/uc?export=download&id=${GDRIVE_FILE_ID}" -o assets/icon.png
           fi
 
@@ -55,7 +55,6 @@ jobs:
           fi
 
           ls -la assets || true
-
       - name: Install Dependencies
         run: flutter pub get
 

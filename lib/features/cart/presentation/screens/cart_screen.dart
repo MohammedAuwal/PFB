@@ -1,3 +1,5 @@
+// lib/features/cart/presentation/screens/cart_screen.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,7 +14,6 @@ import 'package:pfb/services/payment_service.dart';
 
 class CartScreen extends StatefulWidget {
   final bool showScaffold;
-
   const CartScreen({super.key, this.showScaffold = true});
 
   @override
@@ -21,14 +22,14 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   final FirebaseService firebaseService = FirebaseService();
-  final PaymentService paymentService = PaymentService();
+  final PaymentService  paymentService  = PaymentService();
 
-  bool _loadingDeliveryEstimate = false;
-  bool _processingCheckout = false;
+  bool   _loadingDeliveryEstimate = false;
+  bool   _processingCheckout      = false;
   String? _deliveryEstimateError;
   MovementEstimate? _deliveryEstimate;
   String _lastEstimatedAddress = '';
-  String _vendorPickupAddress = '';
+  String _vendorPickupAddress  = '';
 
   bool get _isGuest => FirebaseAuth.instance.currentUser == null;
 
@@ -64,24 +65,26 @@ class _CartScreenState extends State<CartScreen> {
                   Icon(
                     Icons.lock_outline_rounded,
                     color: colors.brandPrimary,
-                    size: 22,
+                    size:  22,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Sign In Required',
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w700,
-                      color: colors.textPrimary,
+                      color:      colors.textPrimary,
                     ),
                   ),
                 ],
               ),
               content: Text(
-                'Please sign in or create an IsmailTex account to continue with checkout and delivery tracking.',
+                // ── CHANGED: IsmailTex → Phlakes Fabrics ─────────
+                'Please sign in or create a Phlakes Fabrics account to '
+                'continue with checkout and delivery tracking.',
                 style: GoogleFonts.poppins(
                   fontSize: 13.5,
-                  height: 1.5,
-                  color: colors.textSecondary,
+                  height:   1.5,
+                  color:    colors.textSecondary,
                 ),
               ),
               actions: [
@@ -93,7 +96,8 @@ class _CartScreenState extends State<CartScreen> {
                   onPressed: () => Navigator.pop(ctx, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.brandPrimary,
-                    foregroundColor: Colors.white,
+                    // Black text on gold — brand contrast
+                    foregroundColor: AppPalette.secondary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -121,7 +125,7 @@ class _CartScreenState extends State<CartScreen> {
 
     if (selectedAddress.trim().isEmpty) {
       setState(() {
-        _deliveryEstimate = null;
+        _deliveryEstimate      = null;
         _deliveryEstimateError =
             'Please select a saved delivery address before checkout';
       });
@@ -130,28 +134,28 @@ class _CartScreenState extends State<CartScreen> {
 
     setState(() {
       _loadingDeliveryEstimate = true;
-      _deliveryEstimateError = null;
+      _deliveryEstimateError   = null;
     });
 
     try {
       final vendorPickup = await firebaseService.getVendorPickupAddress();
 
       final estimate = await firebaseService.estimateMovement(
-        type: 'delivery',
-        pickup: vendorPickup,
+        type:        'delivery',
+        pickup:      vendorPickup,
         destination: selectedAddress,
       );
 
       if (!mounted) return;
       setState(() {
-        _deliveryEstimate = estimate;
-        _lastEstimatedAddress = selectedAddress;
-        _vendorPickupAddress = vendorPickup;
+        _deliveryEstimate      = estimate;
+        _lastEstimatedAddress  = selectedAddress;
+        _vendorPickupAddress   = vendorPickup;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _deliveryEstimate = null;
+        _deliveryEstimate      = null;
         _deliveryEstimateError = e.toString();
       });
     } finally {
@@ -184,8 +188,7 @@ class _CartScreenState extends State<CartScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text('Please check delivery estimate before checkout'),
+          content: Text('Please check delivery estimate before checkout'),
         ),
       );
       return;
@@ -195,18 +198,18 @@ class _CartScreenState extends State<CartScreen> {
 
     try {
       final result = await paymentService.initializeCheckout(
-        userUid: user.uid,
-        email: user.email!,
-        amountNaira: grandTotal,
-        items: cartItems,
+        userUid:      user.uid,
+        email:        user.email!,
+        amountNaira:  grandTotal,
+        items:        cartItems,
         metadata: {
-          'type': 'cart_checkout',
-          'userId': user.uid,
-          'itemsCount': cartItems.length,
-          'itemsTotal': itemsTotal,
+          'type':        'cart_checkout',
+          'userId':      user.uid,
+          'itemsCount':  cartItems.length,
+          'itemsTotal':  itemsTotal,
           'deliveryFee': _deliveryEstimate!.price,
-          'distanceKm': _deliveryEstimate!.distanceKm,
-          'eta': _deliveryEstimate!.eta,
+          'distanceKm':  _deliveryEstimate!.distanceKm,
+          'eta':         _deliveryEstimate!.eta,
         },
       );
 
@@ -234,20 +237,20 @@ class _CartScreenState extends State<CartScreen> {
       if (!mounted) return;
 
       final session = PaymentSessionModel(
-        reference: result.reference,
-        userUid: user.uid,
-        email: user.email!,
+        reference:   result.reference,
+        userUid:     user.uid,
+        email:       user.email!,
         amountNaira: grandTotal,
-        currency: 'NGN',
-        items: cartItems,
+        currency:    'NGN',
+        items:       cartItems,
         metadata: {
-          'type': 'cart_checkout',
-          'userId': user.uid,
-          'itemsCount': cartItems.length,
-          'itemsTotal': itemsTotal,
+          'type':        'cart_checkout',
+          'userId':      user.uid,
+          'itemsCount':  cartItems.length,
+          'itemsTotal':  itemsTotal,
           'deliveryFee': _deliveryEstimate!.price,
-          'distanceKm': _deliveryEstimate!.distanceKm,
-          'eta': _deliveryEstimate!.eta,
+          'distanceKm':  _deliveryEstimate!.distanceKm,
+          'eta':         _deliveryEstimate!.eta,
         },
       );
 
@@ -283,7 +286,7 @@ class _CartScreenState extends State<CartScreen> {
                   ((item['qty'] ?? 1) as int)),
         );
 
-        // ── Empty Cart ───────────────────────────────────────────
+        // ── Empty Cart ─────────────────────────────────────────────
         if (cartItems.isEmpty) {
           return Center(
             child: Padding(
@@ -292,7 +295,7 @@ class _CartScreenState extends State<CartScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 100,
+                    width:  100,
                     height: 100,
                     decoration: BoxDecoration(
                       color: colors.brandPrimary.withOpacity(0.08),
@@ -300,7 +303,7 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                     child: Icon(
                       Icons.shopping_cart_outlined,
-                      size: 48,
+                      size:  48,
                       color: colors.brandPrimary.withOpacity(0.5),
                     ),
                   ),
@@ -308,19 +311,20 @@ class _CartScreenState extends State<CartScreen> {
                   Text(
                     'Your cart is empty',
                     style: GoogleFonts.poppins(
-                      fontSize: 20,
+                      fontSize:   20,
                       fontWeight: FontWeight.w700,
-                      color: colors.textPrimary,
+                      color:      colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Add products from the IsmailTex store to get started.',
+                    // ── CHANGED: IsmailTex → Phlakes Fabrics ──────
+                    'Add products from the Phlakes Fabrics store to get started.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
-                      color: colors.textSecondary,
-                      height: 1.5,
+                      color:    colors.textSecondary,
+                      height:   1.5,
                     ),
                   ),
                 ],
@@ -339,23 +343,22 @@ class _CartScreenState extends State<CartScreen> {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 setState(() {
-                  _deliveryEstimate = null;
+                  _deliveryEstimate      = null;
                   _deliveryEstimateError = null;
                 });
               });
             }
 
             final deliveryFee = _deliveryEstimate?.price ?? 0;
-            final grandTotal = total + deliveryFee;
+            final grandTotal  = total + deliveryFee;
 
             return CustomScrollView(
               slivers: [
-                // ── Guest Banner ─────────────────────────────────
+                // ── Guest Banner ───────────────────────────────────
                 if (_isGuest)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -370,23 +373,25 @@ class _CartScreenState extends State<CartScreen> {
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: colors.brandPrimary
-                                    .withOpacity(0.15),
-                                shape: BoxShape.circle,
+                                color:  colors.brandPrimary.withOpacity(0.15),
+                                shape:  BoxShape.circle,
                               ),
                               child: Icon(
                                 Icons.person_outline_rounded,
                                 color: colors.brown,
-                                size: 18,
+                                size:  18,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Shopping as guest. Sign in to complete checkout, save addresses, and track orders on IsmailTex.',
+                                // ── CHANGED: IsmailTex → Phlakes Fabrics ──
+                                'Shopping as guest. Sign in to complete '
+                                'checkout, save addresses, and track orders '
+                                'on Phlakes Fabrics.',
                                 style: GoogleFonts.poppins(
-                                  color: colors.brown,
-                                  fontSize: 12,
+                                  color:      colors.brown,
+                                  fontSize:   12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -397,15 +402,15 @@ class _CartScreenState extends State<CartScreen> {
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
-                                  vertical: 6,
+                                  vertical:   6,
                                 ),
                               ),
                               child: Text(
                                 'Sign In',
                                 style: GoogleFonts.poppins(
-                                  color: colors.brandPrimary,
+                                  color:      colors.brandPrimary,
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 12,
+                                  fontSize:   12,
                                 ),
                               ),
                             ),
@@ -415,28 +420,28 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                   ),
 
-                // ── Cart Item Count Header ────────────────────────
+                // ── Cart Count Header ──────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                     child: Row(
                       children: [
                         Container(
-                          width: 4,
+                          width:  4,
                           height: 18,
                           decoration: BoxDecoration(
-                            color: colors.brandPrimary,
+                            color:        colors.brandPrimary,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${cartItems.length} item${cartItems.length == 1 ? '' : 's'} in cart',
+                          '${cartItems.length} item'
+                          '${cartItems.length == 1 ? '' : 's'} in cart',
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            color: colors.textPrimary,
+                            fontSize:   15,
+                            color:      colors.textPrimary,
                           ),
                         ),
                       ],
@@ -444,34 +449,30 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
 
-                // ── Cart Items List ───────────────────────────────
+                // ── Cart Items ─────────────────────────────────────
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (_, i) {
-                        final item = cartItems[i];
-                        final qty = (item['qty'] ?? 1) as int;
-                        final imageUrl =
-                            (item['imageUrl'] ?? '').toString();
+                        final item     = cartItems[i];
+                        final qty      = (item['qty'] ?? 1) as int;
+                        final imageUrl = (item['imageUrl'] ?? '').toString();
                         final itemTotal =
-                            ((item['price'] ?? 0) as num).toDouble() *
-                                qty;
+                            ((item['price'] ?? 0) as num).toDouble() * qty;
 
                         return Container(
-                          margin:
-                              const EdgeInsets.only(bottom: 12),
+                          margin:  const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: colors.card,
+                            color:        colors.card,
                             borderRadius: BorderRadius.circular(18),
-                            border:
-                                Border.all(color: colors.borderSoft),
+                            border:       Border.all(color: colors.borderSoft),
                             boxShadow: [
                               BoxShadow(
-                                color: colors.shadow,
+                                color:      colors.shadow,
                                 blurRadius: 10,
-                                offset: const Offset(0, 4),
+                                offset:     const Offset(0, 4),
                               ),
                             ],
                           ),
@@ -479,25 +480,21 @@ class _CartScreenState extends State<CartScreen> {
                             children: [
                               // Product Image
                               ClipRRect(
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                                 child: SizedBox(
-                                  width: 60,
+                                  width:  60,
                                   height: 60,
                                   child: _hasValidImage(imageUrl)
                                       ? Image.network(
                                           imageUrl,
                                           fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (_, __, ___) =>
-                                                  Container(
+                                          errorBuilder: (_, __, ___) =>
+                                              Container(
                                             color: colors.brandPrimary
                                                 .withOpacity(0.15),
                                             child: Icon(
-                                              Icons
-                                                  .shopping_bag_outlined,
-                                              color:
-                                                  colors.brandPrimary,
+                                              Icons.shopping_bag_outlined,
+                                              color: colors.brandPrimary,
                                             ),
                                           ),
                                         )
@@ -523,8 +520,8 @@ class _CartScreenState extends State<CartScreen> {
                                       (item['name'] ?? '').toString(),
                                       style: GoogleFonts.poppins(
                                         fontWeight: FontWeight.w600,
-                                        color: colors.textPrimary,
-                                        fontSize: 13.5,
+                                        color:      colors.textPrimary,
+                                        fontSize:   13.5,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -533,7 +530,7 @@ class _CartScreenState extends State<CartScreen> {
                                     Text(
                                       '₦${((item['price'] ?? 0) as num).toDouble().toStringAsFixed(2)} each',
                                       style: GoogleFonts.poppins(
-                                        color: colors.textSecondary,
+                                        color:    colors.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -541,9 +538,9 @@ class _CartScreenState extends State<CartScreen> {
                                     Text(
                                       'Subtotal: ₦${itemTotal.toStringAsFixed(2)}',
                                       style: GoogleFonts.poppins(
-                                        color: colors.brandPrimary,
+                                        color:      colors.brandPrimary,
                                         fontWeight: FontWeight.w700,
-                                        fontSize: 12.5,
+                                        fontSize:   12.5,
                                       ),
                                     ),
                                   ],
@@ -553,33 +550,30 @@ class _CartScreenState extends State<CartScreen> {
                               // Qty Controls
                               Container(
                                 decoration: BoxDecoration(
-                                  color: colors.surfaceAlt,
-                                  borderRadius:
-                                      BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: colors.borderSoft),
+                                  color:        colors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border:       Border.all(
+                                    color: colors.borderSoft,
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     InkWell(
                                       onTap: () async {
-                                        await firebaseService
-                                            .updateCartQty(
-                                          productId: item['productId']
-                                              .toString(),
+                                        await firebaseService.updateCartQty(
+                                          productId:
+                                              item['productId'].toString(),
                                           qty: qty - 1,
                                         );
                                       },
                                       borderRadius:
                                           BorderRadius.circular(10),
                                       child: Padding(
-                                        padding:
-                                            const EdgeInsets.all(8),
+                                        padding: const EdgeInsets.all(8),
                                         child: Icon(
-                                          Icons
-                                              .remove_rounded,
-                                          size: 18,
+                                          Icons.remove_rounded,
+                                          size:  18,
                                           color: qty <= 1
                                               ? colors.textSecondary
                                               : colors.brandPrimary,
@@ -587,34 +581,33 @@ class _CartScreenState extends State<CartScreen> {
                                       ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets
-                                          .symmetric(horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
                                       child: Text(
                                         '$qty',
                                         style: GoogleFonts.poppins(
                                           fontWeight: FontWeight.w700,
-                                          color: colors.textPrimary,
-                                          fontSize: 14,
+                                          color:      colors.textPrimary,
+                                          fontSize:   14,
                                         ),
                                       ),
                                     ),
                                     InkWell(
                                       onTap: () async {
-                                        await firebaseService
-                                            .updateCartQty(
-                                          productId: item['productId']
-                                              .toString(),
+                                        await firebaseService.updateCartQty(
+                                          productId:
+                                              item['productId'].toString(),
                                           qty: qty + 1,
                                         );
                                       },
                                       borderRadius:
                                           BorderRadius.circular(10),
                                       child: Padding(
-                                        padding:
-                                            const EdgeInsets.all(8),
+                                        padding: const EdgeInsets.all(8),
                                         child: Icon(
                                           Icons.add_rounded,
-                                          size: 18,
+                                          size:  18,
                                           color: colors.brandPrimary,
                                         ),
                                       ),
@@ -631,20 +624,20 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
 
-                // ── Order Summary + Checkout ──────────────────────
+                // ── Order Summary ──────────────────────────────────
                 SliverToBoxAdapter(
                   child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    margin:  const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: colors.card,
+                      color:        colors.card,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: colors.borderSoft),
+                      border:       Border.all(color: colors.borderSoft),
                       boxShadow: [
                         BoxShadow(
-                          color: colors.shadow,
+                          color:      colors.shadow,
                           blurRadius: 14,
-                          offset: const Offset(0, 4),
+                          offset:     const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -657,15 +650,13 @@ class _CartScreenState extends State<CartScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: colors.brandPrimary
-                                    .withOpacity(0.12),
-                                borderRadius:
-                                    BorderRadius.circular(10),
+                                color: colors.brandPrimary.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
                                 Icons.summarize_rounded,
                                 color: colors.brandPrimary,
-                                size: 18,
+                                size:  18,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -673,30 +664,26 @@ class _CartScreenState extends State<CartScreen> {
                               'Order Summary',
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: colors.textPrimary,
+                                fontSize:   15,
+                                color:      colors.textPrimary,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
 
-                        // Delivery Address Row
+                        // Delivery Address
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: (_isGuest ||
-                                    selectedAddress.isEmpty)
+                            color: (_isGuest || selectedAddress.isEmpty)
                                 ? colors.error.withOpacity(0.07)
-                                : colors.brandPrimary
-                                    .withOpacity(0.07),
+                                : colors.brandPrimary.withOpacity(0.07),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: (_isGuest ||
-                                      selectedAddress.isEmpty)
+                              color: (_isGuest || selectedAddress.isEmpty)
                                   ? colors.error.withOpacity(0.25)
-                                  : colors.brandPrimary
-                                      .withOpacity(0.20),
+                                  : colors.brandPrimary.withOpacity(0.20),
                             ),
                           ),
                           child: Row(
@@ -705,8 +692,7 @@ class _CartScreenState extends State<CartScreen> {
                                 (_isGuest || selectedAddress.isEmpty)
                                     ? Icons.location_off_outlined
                                     : Icons.location_on_rounded,
-                                color: (_isGuest ||
-                                        selectedAddress.isEmpty)
+                                color: (_isGuest || selectedAddress.isEmpty)
                                     ? colors.error
                                     : colors.brandPrimary,
                                 size: 18,
@@ -724,7 +710,7 @@ class _CartScreenState extends State<CartScreen> {
                                             selectedAddress.isEmpty)
                                         ? colors.error
                                         : colors.textPrimary,
-                                    fontSize: 12,
+                                    fontSize:   12,
                                     fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 2,
@@ -739,17 +725,14 @@ class _CartScreenState extends State<CartScreen> {
                         // Estimate Error
                         if (_deliveryEstimateError != null)
                           Container(
-                            width: double.infinity,
+                            width:   double.infinity,
                             padding: const EdgeInsets.all(12),
-                            margin:
-                                const EdgeInsets.only(bottom: 12),
+                            margin:  const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
                               color: colors.error.withOpacity(0.08),
-                              borderRadius:
-                                  BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color:
-                                    colors.error.withOpacity(0.25),
+                                color: colors.error.withOpacity(0.25),
                               ),
                             ),
                             child: Row(
@@ -757,15 +740,15 @@ class _CartScreenState extends State<CartScreen> {
                                 Icon(
                                   Icons.error_outline_rounded,
                                   color: colors.error,
-                                  size: 16,
+                                  size:  16,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _deliveryEstimateError!,
                                     style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: colors.error,
+                                      fontSize:   12,
+                                      color:      colors.error,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -777,80 +760,72 @@ class _CartScreenState extends State<CartScreen> {
                         // Delivery Estimate Card
                         if (_deliveryEstimate != null) ...[
                           Container(
-                            width: double.infinity,
+                            width:   double.infinity,
                             padding: const EdgeInsets.all(16),
-                            margin:
-                                const EdgeInsets.only(bottom: 14),
+                            margin:  const EdgeInsets.only(bottom: 14),
                             decoration: BoxDecoration(
-                              color: colors.paleOrange
-                                  .withOpacity(0.5),
-                              borderRadius:
-                                  BorderRadius.circular(16),
+                              color: colors.paleOrange.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: colors.brandPrimary
-                                    .withOpacity(0.2),
+                                color: colors.brandPrimary.withOpacity(0.2),
                               ),
                             ),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
                                     Icon(
-                                      Icons
-                                          .delivery_dining_rounded,
+                                      Icons.delivery_dining_rounded,
                                       color: colors.brandPrimary,
-                                      size: 18,
+                                      size:  18,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Delivery Estimate',
                                       style: GoogleFonts.poppins(
-                                        fontSize: 13,
+                                        fontSize:   13,
                                         fontWeight: FontWeight.w700,
-                                        color: colors.textPrimary,
+                                        color:      colors.textPrimary,
                                       ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 10),
                                 _EstimateRow(
-                                  icon: Icons.store_outlined,
-                                  label: 'IsmailTex Pickup',
-                                  value:
-                                      _deliveryEstimate!.pickupLabel,
+                                  icon:   Icons.store_outlined,
+                                  // ── CHANGED: IsmailTex → Phlakes ─────
+                                  label:  'Phlakes Fabrics Pickup',
+                                  value:  _deliveryEstimate!.pickupLabel,
                                   colors: colors,
                                 ),
                                 const SizedBox(height: 6),
                                 _EstimateRow(
-                                  icon: Icons.flag_outlined,
-                                  label: 'Destination',
-                                  value: _deliveryEstimate!
-                                      .destinationLabel,
+                                  icon:   Icons.flag_outlined,
+                                  label:  'Destination',
+                                  value:  _deliveryEstimate!.destinationLabel,
                                   colors: colors,
                                 ),
                                 const SizedBox(height: 6),
                                 _EstimateRow(
-                                  icon: Icons.straighten_rounded,
-                                  label: 'Distance',
+                                  icon:   Icons.straighten_rounded,
+                                  label:  'Distance',
                                   value:
                                       '${_deliveryEstimate!.distanceKm.toStringAsFixed(1)} km',
                                   colors: colors,
                                 ),
                                 _EstimateRow(
-                                  icon: Icons.timer_outlined,
-                                  label: 'ETA',
-                                  value: _deliveryEstimate!.eta,
+                                  icon:   Icons.timer_outlined,
+                                  label:  'ETA',
+                                  value:  _deliveryEstimate!.eta,
                                   colors: colors,
                                 ),
                                 const SizedBox(height: 4),
                                 _EstimateRow(
-                                  icon: Icons.payments_outlined,
-                                  label: 'Delivery Fee',
-                                  value:
-                                      '₦${_deliveryEstimate!.price.toStringAsFixed(0)}',
-                                  colors: colors,
+                                  icon:      Icons.payments_outlined,
+                                  label:     'Delivery Fee',
+                                  value:     '₦${_deliveryEstimate!.price.toStringAsFixed(0)}',
+                                  colors:    colors,
                                   highlight: true,
                                 ),
                                 const SizedBox(height: 12),
@@ -862,22 +837,22 @@ class _CartScreenState extends State<CartScreen> {
                                         MaterialPageRoute(
                                           builder: (_) =>
                                               RideEstimateMapPreviewScreen(
-                                            estimate:
-                                                _deliveryEstimate!,
+                                            estimate: _deliveryEstimate!,
                                             title:
                                                 'Delivery Route Preview',
                                           ),
                                         ),
                                       );
                                     },
-                                    icon: const Icon(
-                                        Icons.map_outlined,
-                                        size: 18),
+                                    icon:  const Icon(
+                                      Icons.map_outlined,
+                                      size: 18,
+                                    ),
                                     label: Text(
                                       'Preview Delivery Route',
                                       style: GoogleFonts.poppins(
                                         fontWeight: FontWeight.w600,
-                                        fontSize: 13,
+                                        fontSize:   13,
                                       ),
                                     ),
                                   ),
@@ -889,20 +864,19 @@ class _CartScreenState extends State<CartScreen> {
 
                         // Check Delivery Button
                         SizedBox(
-                          width: double.infinity,
+                          width:  double.infinity,
                           height: 48,
                           child: OutlinedButton.icon(
                             onPressed: _loadingDeliveryEstimate
                                 ? null
-                                : () =>
-                                    _estimateDelivery(selectedAddress),
+                                : () => _estimateDelivery(selectedAddress),
                             icon: _loadingDeliveryEstimate
                                 ? SizedBox(
-                                    width: 18,
+                                    width:  18,
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: colors.brandPrimary,
+                                      color:       colors.brandPrimary,
                                     ),
                                   )
                                 : const Icon(
@@ -929,8 +903,8 @@ class _CartScreenState extends State<CartScreen> {
 
                         // Price Breakdown
                         _PriceRow(
-                          label: 'Items Total',
-                          value: '₦${total.toStringAsFixed(2)}',
+                          label:  'Items Total',
+                          value:  '₦${total.toStringAsFixed(2)}',
                           colors: colors,
                         ),
                         const SizedBox(height: 8),
@@ -941,20 +915,21 @@ class _CartScreenState extends State<CartScreen> {
                                   ? 'Sign in first'
                                   : 'Estimate required')
                               : '₦${deliveryFee.toStringAsFixed(2)}',
-                          colors: colors,
+                          colors:     colors,
                           valueColor: _deliveryEstimate == null
                               ? colors.textSecondary
                               : colors.brandPrimary,
                         ),
                         const SizedBox(height: 12),
+
+                        // Grand Total
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
-                            vertical: 12,
+                            vertical:   12,
                           ),
                           decoration: BoxDecoration(
-                            color: colors.brandPrimary
-                                .withOpacity(0.07),
+                            color: colors.brandPrimary.withOpacity(0.07),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(
@@ -963,8 +938,8 @@ class _CartScreenState extends State<CartScreen> {
                                 'Grand Total',
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 17,
-                                  color: colors.textPrimary,
+                                  fontSize:   17,
+                                  color:      colors.textPrimary,
                                 ),
                               ),
                               const Spacer(),
@@ -972,8 +947,8 @@ class _CartScreenState extends State<CartScreen> {
                                 '₦${grandTotal.toStringAsFixed(2)}',
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 17,
-                                  color: colors.brandPrimary,
+                                  fontSize:   17,
+                                  color:      colors.brandPrimary,
                                 ),
                               ),
                             ],
@@ -981,9 +956,9 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Checkout Button
+                        // ── Checkout Button — gold, black text ─────
                         SizedBox(
-                          width: double.infinity,
+                          width:  double.infinity,
                           height: 54,
                           child: ElevatedButton.icon(
                             onPressed: _processingCheckout
@@ -995,20 +970,21 @@ class _CartScreenState extends State<CartScreen> {
                                     ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: colors.brandPrimary,
-                              foregroundColor: Colors.white,
+                              // ── CHANGED: Colors.white → black on gold ─
+                              foregroundColor: AppPalette.secondary,
                               elevation: 2,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                             icon: _processingCheckout
-                                ? const SizedBox(
-                                    width: 20,
+                                ? SizedBox(
+                                    width:  20,
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.white,
+                                      // Keep white spinner on gold bg
+                                      color: AppPalette.secondary,
                                     ),
                                   )
                                 : const Icon(
@@ -1023,27 +999,27 @@ class _CartScreenState extends State<CartScreen> {
                                       : 'Proceed to Checkout'),
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w700,
-                                fontSize: 15,
+                                fontSize:   15,
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 10),
 
-                        // Trust Badge
+                        // ── Trust Badge ────────────────────────────
                         Center(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.verified_user_outlined,
-                                size: 13,
-                                color: colors.textSecondary
-                                    .withOpacity(0.6),
+                                size:  13,
+                                color: colors.textSecondary.withOpacity(0.6),
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                'Secured by Paystack · IsmailTex',
+                                // ── CHANGED: IsmailTex → Phlakes Fabrics ─
+                                'Secured by Paystack · Phlakes Fabrics',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   color: colors.textSecondary
@@ -1079,13 +1055,13 @@ class _CartScreenState extends State<CartScreen> {
             Icon(
               Icons.shopping_cart_rounded,
               color: colors.brandPrimary,
-              size: 22,
+              size:  22,
             ),
             const SizedBox(width: 8),
             Text(
               'My Cart',
               style: GoogleFonts.poppins(
-                color: colors.textPrimary,
+                color:      colors.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1103,18 +1079,18 @@ class _CartScreenState extends State<CartScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
-                      vertical: 4,
+                      vertical:   4,
                     ),
                     decoration: BoxDecoration(
-                      color: colors.brandPrimary.withOpacity(0.12),
+                      color:        colors.brandPrimary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '$count item${count == 1 ? '' : 's'}',
                       style: GoogleFonts.poppins(
-                        color: colors.brandPrimary,
+                        color:      colors.brandPrimary,
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
+                        fontSize:   12,
                       ),
                     ),
                   ),
@@ -1129,14 +1105,14 @@ class _CartScreenState extends State<CartScreen> {
   }
 }
 
-// ── Estimate Row Helper ────────────────────────────────────────────────────────
+// ── Estimate Row ───────────────────────────────────────────────────────────────
 
 class _EstimateRow extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final String value;
-  final dynamic colors;
-  final bool highlight;
+  final String   label;
+  final String   value;
+  final dynamic  colors;
+  final bool     highlight;
 
   const _EstimateRow({
     required this.icon,
@@ -1158,16 +1134,15 @@ class _EstimateRow extends StatelessWidget {
             '$label: ',
             style: GoogleFonts.poppins(
               fontSize: 12,
-              color: colors.textSecondary,
+              color:    colors.textSecondary,
             ),
           ),
           Flexible(
             child: Text(
               value,
               style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight:
-                    highlight ? FontWeight.w700 : FontWeight.w600,
+                fontSize:   12,
+                fontWeight: highlight ? FontWeight.w700 : FontWeight.w600,
                 color: highlight ? colors.brandPrimary : colors.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
@@ -1179,7 +1154,7 @@ class _EstimateRow extends StatelessWidget {
   }
 }
 
-// ── Price Row Helper ───────────────────────────────────────────────────────────
+// ── Price Row ──────────────────────────────────────────────────────────────────
 
 class _PriceRow extends StatelessWidget {
   final String label;
@@ -1202,8 +1177,8 @@ class _PriceRow extends StatelessWidget {
           label,
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: colors.textSecondary,
+            fontSize:   14,
+            color:      colors.textSecondary,
           ),
         ),
         const Spacer(),
@@ -1211,8 +1186,8 @@ class _PriceRow extends StatelessWidget {
           value,
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            fontSize: 14,
-            color: valueColor ?? colors.textPrimary,
+            fontSize:   14,
+            color:      valueColor ?? colors.textPrimary,
           ),
         ),
       ],

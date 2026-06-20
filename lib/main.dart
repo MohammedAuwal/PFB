@@ -11,7 +11,7 @@ import 'package:pfb/firebase_options.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // ── Fix: Check if Firebase is already initialized ───────────
+  // ── CRITICAL: Only initialize if NOT already initialized ───────
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -28,7 +28,6 @@ Future<void> main() async {
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      // ── Updated to Phlakes Fabrics brand colors ─────────────
       statusBarColor: Color(0xFF0B0B0B),
       statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: Color(0xFF0B0B0B),
@@ -40,12 +39,13 @@ Future<void> main() async {
   StackTrace? startupStack;
 
   try {
-    // ── Fix: Check if Firebase is already initialized ─────────
+    // ── CRITICAL: Only initialize if NOT already initialized ─────
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       ).timeout(const Duration(seconds: 12));
     }
+    // ── If apps.isNotEmpty, Firebase is already init, skip ───────
   } catch (e, st) {
     startupError = Exception('Firebase init failed: $e');
     startupStack = st;
@@ -92,9 +92,7 @@ Future<void> _initializeFcmNonBlocking() async {
     await FcmService.instance
         .initialize()
         .timeout(const Duration(seconds: 20));
-  } catch (_) {
-    // Do not block app startup if FCM initialization is slow or fails.
-  }
+  } catch (_) {}
 }
 
 class StartupErrorApp extends StatelessWidget {
@@ -112,7 +110,6 @@ class StartupErrorApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        // ── Updated to Phlakes Fabrics brand colors ───────────
         backgroundColor: const Color(0xFF0B0B0B),
         body: SafeArea(
           child: Padding(
@@ -125,7 +122,7 @@ class StartupErrorApp extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.error_outline,
-                      color: Color(0xFFD4AF37), // ── Gold icon ──
+                      color: Color(0xFFD4AF37),
                       size: 56,
                     ),
                     const SizedBox(height: 16),
@@ -138,31 +135,13 @@ class StartupErrorApp extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Startup error details:',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
                     SelectableText(
                       '$error',
                       style: const TextStyle(
-                        color: Color(0xFFD4AF37), // ── Gold text ─
+                        color: Color(0xFFD4AF37),
                         fontSize: 14,
                       ),
                     ),
-                    if (stackTrace != null) ...[
-                      const SizedBox(height: 20),
-                      SelectableText(
-                        '$stackTrace',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),

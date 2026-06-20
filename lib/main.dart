@@ -9,16 +9,15 @@ import 'package:pfb/services/fcm_service.dart';
 import 'package:pfb/services/local_notification_service.dart';
 import 'package:pfb/firebase_options.dart';
 
-// ── FIXED: Check Firebase.apps.isEmpty ──────────────────────────────────────
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // ✅ Ignore duplicate-app error completely
   try {
-    // ✅ Only initialize if not already done
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    }
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') rethrow;
   } catch (_) {}
 
   try {
@@ -42,12 +41,16 @@ Future<void> main() async {
   StackTrace? startupStack;
 
   try {
-    // ✅ Only initialize if not already done
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      ).timeout(const Duration(seconds: 12));
+    // ✅ Catch duplicate-app error and ignore it
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 12));
+  } on FirebaseException catch (e, st) {
+    if (e.code != 'duplicate-app') {
+      startupError = Exception('Firebase init failed: $e');
+      startupStack = st;
     }
+    // duplicate-app is OK — Firebase is already initialized
   } catch (e, st) {
     startupError = Exception('Firebase init failed: $e');
     startupStack = st;

@@ -10,6 +10,12 @@ on:
     branches:
       - main
 
+# ── Grant GITHUB_TOKEN the permissions it needs ──────────────────────────────
+permissions:
+  contents: write   # ← required to create releases and upload assets
+  actions:  read
+  checks:   read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -144,12 +150,12 @@ jobs:
         run: |
           set -euo pipefail
           keytool -list \
-            -keystore "$KEYSTORE_PATH" \
+            -keystore  "$KEYSTORE_PATH" \
             -storepass "${{ secrets.KEY_STORE_PASSWORD }}" > /dev/null
 
           keytool -list -v \
-            -keystore "$KEYSTORE_PATH" \
-            -alias    "${{ secrets.KEY_ALIAS }}" \
+            -keystore  "$KEYSTORE_PATH" \
+            -alias     "${{ secrets.KEY_ALIAS }}" \
             -storepass "${{ secrets.KEY_STORE_PASSWORD }}" \
             -keypass   "${{ secrets.KEY_PASSWORD }}" > /dev/null
 
@@ -189,101 +195,105 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Extract version from pubspec.yaml  e.g. "1.0.0+4"
+          # Extract version from pubspec.yaml e.g. "1.0.0+4"
           VERSION=$(grep '^version:' pubspec.yaml \
             | sed 's/version: //' \
             | tr -d '[:space:]')
 
-          # Build timestamp  e.g. "20250115-1430"
+          # Sanitize version — replace + with - for tag safety
+          # e.g. "1.0.0+4" → "1.0.0-4"
+          VERSION_SAFE=$(echo "$VERSION" | tr '+' '-')
+
+          # Build timestamp e.g. "20250115-1430"
           TIMESTAMP=$(date -u +'%Y%m%d-%H%M')
 
-          APK_NAME="phlakes-fabrics-v${VERSION}-${TIMESTAMP}.apk"
+          APK_NAME="phlakes-fabrics-v${VERSION_SAFE}-${TIMESTAMP}.apk"
 
           mv build/app/outputs/flutter-apk/app-release.apk \
              "build/app/outputs/flutter-apk/${APK_NAME}"
 
           # Export to env for later steps
-          echo "APK_NAME=${APK_NAME}"       >> "$GITHUB_ENV"
-          echo "APP_VERSION=${VERSION}"     >> "$GITHUB_ENV"
-          echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> "$GITHUB_ENV"
+          echo "APK_NAME=${APK_NAME}"             >> "$GITHUB_ENV"
+          echo "APP_VERSION=${VERSION}"           >> "$GITHUB_ENV"
+          echo "APP_VERSION_SAFE=${VERSION_SAFE}" >> "$GITHUB_ENV"
+          echo "BUILD_TIMESTAMP=${TIMESTAMP}"     >> "$GITHUB_ENV"
 
           echo "✅ APK renamed to: ${APK_NAME}"
 
       # ================================================================
       # STEP 14: Upload APK as workflow artifact
-      #          (available on every push — including PRs)
+      #          Available on every run including PRs
       # ================================================================
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: phlakes-fabrics-apk-${{ env.BUILD_TIMESTAMP }}
-          path: build/app/outputs/flutter-apk/${{ env.APK_NAME }}
-          retention-days: 30
+          name:              phlakes-fabrics-apk-${{ env.BUILD_TIMESTAMP }}
+          path:              build/app/outputs/flutter-apk/${{ env.APK_NAME }}
+          retention-days:    30
           if-no-files-found: error
 
       # ================================================================
       # STEP 15: Generate release tag
-      #          Only on push to main (not on pull_request)
+      #          Only on push to main — not on pull_request
       # ================================================================
       - name: Generate release tag
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        id: tag
         run: |
           set -euo pipefail
-
-          # Tag format:  v1.0.0+4-20250115-1430
-          TAG="v${{ env.APP_VERSION }}-${{ env.BUILD_TIMESTAMP }}"
+          TAG="v${{ env.APP_VERSION_SAFE }}-${{ env.BUILD_TIMESTAMP }}"
           echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
-          echo "tag=${TAG}"        >> "$GITHUB_OUTPUT"
           echo "✅ Release tag: ${TAG}"
 
       # ================================================================
-      # STEP 16: Create GitHub Release + upload APK
-      #          Only on push to main (not on pull_request)
+      # STEP 16: Create GitHub Release
+      #          Only on push to main — not on pull_request
       # ================================================================
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name:   ${{ env.RELEASE_TAG }}
-          name:       "Phlakes Fabrics ${{ env.RELEASE_TAG }}"
+          tag_name:    ${{ env.RELEASE_TAG }}
+          name:        "Phlakes Fabrics ${{ env.RELEASE_TAG }}"
           body: |
             ## 🟡 Phlakes Fabrics — Release ${{ env.RELEASE_TAG }}
 
-            **Version:** `${{ env.APP_VERSION }}`
-            **Built:**   `${{ env.BUILD_TIMESTAMP }} UTC`
-            **Branch:**  `${{ github.ref_name }}`
-            **Commit:**  `${{ github.sha }}`
+            **Version:**   `${{ env.APP_VERSION }}`
+            **Built:**     `${{ env.BUILD_TIMESTAMP }} UTC`
+            **Branch:**    `${{ github.ref_name }}`
+            **Commit:**    `${{ github.sha }}`
 
             ---
 
-            ### 📲 Installation
+            ### 📲 How to Install
             1. Download **`${{ env.APK_NAME }}`** below
             2. Transfer to your Android device
-            3. Enable **Install from Unknown Sources** in Settings
-            4. Open the APK to install
+            3. Enable **Install from Unknown Sources** in Settings → Security
+            4. Open the APK file to install
 
             ---
 
             ### ✅ Build Info
-            - Flutter channel: `stable`
-            - Java: `17`
-            - Signed: `release keystore`
-            - Obfuscated: `yes`
+            | Property | Value |
+            |---|---|
+            | Flutter channel | `stable` |
+            | Java version | `17` |
+            | Signed | `release keystore ✅` |
+            | Obfuscated | `yes` |
+            | Build system | `GitHub Actions` |
 
             ---
 
-            > Built automatically by GitHub Actions on push to `main`
-          files: |
-            build/app/outputs/flutter-apk/${{ env.APK_NAME }}
-          draft:      false
-          prerelease: false
+            > Built automatically on push to `main`
+          files:       build/app/outputs/flutter-apk/${{ env.APK_NAME }}
+          draft:       false
+          prerelease:  false
           make_latest: true
         env:
+          # ── Use GITHUB_TOKEN — permissions: contents: write grants access ──
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ================================================================
-      # STEP 17: Print release summary
+      # STEP 17: Print build summary
       # ================================================================
       - name: Print build summary
         if: always()

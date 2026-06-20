@@ -1,12 +1,15 @@
-name: Android Build (Flutter APK)
+# .github/workflows/android_build.yml
+
+name: Android Build & Release (Flutter APK)
 
 on:
   push:
     branches:
       - main
   pull_request:
-    branches: [ main ]
-  
+    branches:
+      - main
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,12 +21,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ================================================================
+      # STEP 1: Set up Java 17
+      # ================================================================
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      # ================================================================
+      # STEP 2: Set up Flutter
+      # ================================================================
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -31,7 +40,7 @@ jobs:
           cache: true
 
       # ================================================================
-      # STEP 1: Clean old artifacts
+      # STEP 3: Clean old artifacts
       # ================================================================
       - name: Clean old build artifacts
         run: |
@@ -40,7 +49,7 @@ jobs:
           echo "✅ Clean complete"
 
       # ================================================================
-      # STEP 2: Setup assets
+      # STEP 4: Setup asset directories
       # ================================================================
       - name: Setup asset directories
         run: |
@@ -64,7 +73,7 @@ jobs:
           echo "✅ Asset directories ready"
 
       # ================================================================
-      # STEP 3: Download icons from Google Drive
+      # STEP 5: Download icon assets from Google Drive
       # ================================================================
       - name: Download icon assets
         run: |
@@ -83,12 +92,10 @@ jobs:
           fi
 
           cp "$OUTPUT" assets/icon_foreground.png
-
-
           echo "✅ Icon downloaded successfully"
 
       # ================================================================
-      # STEP 4: Flutter pub get
+      # STEP 6: Flutter pub get
       # ================================================================
       - name: Flutter pub get
         run: |
@@ -96,7 +103,7 @@ jobs:
           echo "✅ Flutter dependencies installed"
 
       # ================================================================
-      # STEP 5: Generate launcher icons
+      # STEP 7: Generate launcher icons
       # ================================================================
       - name: Generate launcher icons
         run: |
@@ -105,7 +112,7 @@ jobs:
           echo "✅ All launcher icons generated"
 
       # ================================================================
-      # STEP 6: Verify Firebase config
+      # STEP 8: Verify Firebase config
       # ================================================================
       - name: Verify google-services.json
         run: |
@@ -116,7 +123,7 @@ jobs:
           echo "✅ google-services.json found"
 
       # ================================================================
-      # STEP 7: Decode Keystore
+      # STEP 9: Decode Keystore
       # ================================================================
       - name: Decode keystore
         run: |
@@ -128,44 +135,169 @@ jobs:
           mkdir -p "$(dirname "$KEYSTORE_PATH")"
           rm -f "$KEYSTORE_PATH"
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_PATH"
-          echo "✅ Keystore decoded successfully to $KEYSTORE_PATH"
+          echo "✅ Keystore decoded to $KEYSTORE_PATH"
 
       # ================================================================
-      # STEP 8: Verify Keystore & Passwords Integrity
+      # STEP 10: Verify Keystore & Password Integrity
       # ================================================================
       - name: Verify keystore integrity
         run: |
           set -euo pipefail
-          # Verify Store Password
-          keytool -list -keystore "$KEYSTORE_PATH" -storepass "${{ secrets.KEY_STORE_PASSWORD }}" > /dev/null
-          # Verify Key Password and Alias
-          keytool -list -v -keystore "$KEYSTORE_PATH" \
-            -alias "${{ secrets.KEY_ALIAS }}" \
+          keytool -list \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "${{ secrets.KEY_STORE_PASSWORD }}" > /dev/null
+
+          keytool -list -v \
+            -keystore "$KEYSTORE_PATH" \
+            -alias    "${{ secrets.KEY_ALIAS }}" \
             -storepass "${{ secrets.KEY_STORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" > /dev/null
+            -keypass   "${{ secrets.KEY_PASSWORD }}" > /dev/null
+
           echo "✅ Keystore and all passwords verified!"
 
       # ================================================================
-      # STEP 9: Create key.properties
+      # STEP 11: Create key.properties
       # ================================================================
       - name: Create key.properties
         run: |
           set -euo pipefail
-          # storeFile is relative to the app/ build.gradle location.
-          # Since the file is in android/app/upload-keystore.jks, we just use the filename.
           cat > android/key.properties << EOF
           storeFile=upload-keystore.jks
           storePassword=${{ secrets.KEY_STORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
-          echo "✅ key.properties created successfully"
+          echo "✅ key.properties created"
 
       # ================================================================
-      # STEP 10: Build Release APK
+      # STEP 12: Build Release APK
       # ================================================================
       - name: Build Release APK
         run: |
           set -euo pipefail
           flutter build apk \
             --release \
+            --obfuscate \
+            --split-debug-info=build/debug-info \
+            --no-tree-shake-icons
+          echo "✅ Release APK built successfully"
+
+      # ================================================================
+      # STEP 13: Rename APK with version + timestamp
+      # ================================================================
+      - name: Rename APK
+        run: |
+          set -euo pipefail
+
+          # Extract version from pubspec.yaml  e.g. "1.0.0+4"
+          VERSION=$(grep '^version:' pubspec.yaml \
+            | sed 's/version: //' \
+            | tr -d '[:space:]')
+
+          # Build timestamp  e.g. "20250115-1430"
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M')
+
+          APK_NAME="phlakes-fabrics-v${VERSION}-${TIMESTAMP}.apk"
+
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             "build/app/outputs/flutter-apk/${APK_NAME}"
+
+          # Export to env for later steps
+          echo "APK_NAME=${APK_NAME}"       >> "$GITHUB_ENV"
+          echo "APP_VERSION=${VERSION}"     >> "$GITHUB_ENV"
+          echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> "$GITHUB_ENV"
+
+          echo "✅ APK renamed to: ${APK_NAME}"
+
+      # ================================================================
+      # STEP 14: Upload APK as workflow artifact
+      #          (available on every push — including PRs)
+      # ================================================================
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: phlakes-fabrics-apk-${{ env.BUILD_TIMESTAMP }}
+          path: build/app/outputs/flutter-apk/${{ env.APK_NAME }}
+          retention-days: 30
+          if-no-files-found: error
+
+      # ================================================================
+      # STEP 15: Generate release tag
+      #          Only on push to main (not on pull_request)
+      # ================================================================
+      - name: Generate release tag
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: tag
+        run: |
+          set -euo pipefail
+
+          # Tag format:  v1.0.0+4-20250115-1430
+          TAG="v${{ env.APP_VERSION }}-${{ env.BUILD_TIMESTAMP }}"
+          echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "tag=${TAG}"        >> "$GITHUB_OUTPUT"
+          echo "✅ Release tag: ${TAG}"
+
+      # ================================================================
+      # STEP 16: Create GitHub Release + upload APK
+      #          Only on push to main (not on pull_request)
+      # ================================================================
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name:   ${{ env.RELEASE_TAG }}
+          name:       "Phlakes Fabrics ${{ env.RELEASE_TAG }}"
+          body: |
+            ## 🟡 Phlakes Fabrics — Release ${{ env.RELEASE_TAG }}
+
+            **Version:** `${{ env.APP_VERSION }}`
+            **Built:**   `${{ env.BUILD_TIMESTAMP }} UTC`
+            **Branch:**  `${{ github.ref_name }}`
+            **Commit:**  `${{ github.sha }}`
+
+            ---
+
+            ### 📲 Installation
+            1. Download **`${{ env.APK_NAME }}`** below
+            2. Transfer to your Android device
+            3. Enable **Install from Unknown Sources** in Settings
+            4. Open the APK to install
+
+            ---
+
+            ### ✅ Build Info
+            - Flutter channel: `stable`
+            - Java: `17`
+            - Signed: `release keystore`
+            - Obfuscated: `yes`
+
+            ---
+
+            > Built automatically by GitHub Actions on push to `main`
+          files: |
+            build/app/outputs/flutter-apk/${{ env.APK_NAME }}
+          draft:      false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ================================================================
+      # STEP 17: Print release summary
+      # ================================================================
+      - name: Print build summary
+        if: always()
+        run: |
+          echo "=============================================="
+          echo "  PHLAKES FABRICS — BUILD SUMMARY"
+          echo "=============================================="
+          echo "  APK Name   : ${{ env.APK_NAME }}"
+          echo "  Version    : ${{ env.APP_VERSION }}"
+          echo "  Timestamp  : ${{ env.BUILD_TIMESTAMP }}"
+          echo "  Event      : ${{ github.event_name }}"
+          echo "  Branch     : ${{ github.ref_name }}"
+          echo "  Commit     : ${{ github.sha }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "  Release    : https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_TAG }}"
+          fi
+          echo "=============================================="

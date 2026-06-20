@@ -1,3 +1,4 @@
+// lib/features/admin/presentation/screens/admin_orders_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,7 +16,6 @@ class AdminOrdersScreen extends StatelessWidget {
 
   final firebaseService = FirebaseService();
 
-  // ── Status Color Resolver ────────────────────────────────────────────────────
   Color _statusColor(String status, dynamic colors) {
     switch (status.toLowerCase()) {
       case 'delivered':
@@ -58,8 +58,10 @@ class AdminOrdersScreen extends StatelessWidget {
       body: FutureBuilder<bool>(
         future: firebaseService.isAdmin(),
         builder: (context, adminSnapshot) {
-          if (adminSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+          if (adminSnapshot.connectionState ==
+              ConnectionState.waiting) {
+            return const Center(
+                child: CircularProgressIndicator());
           }
 
           final isAdmin = adminSnapshot.data ?? false;
@@ -103,8 +105,10 @@ class AdminOrdersScreen extends StatelessWidget {
           return StreamBuilder<List<OrderModel>>(
             stream: ordersStream,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+              if (snapshot.connectionState ==
+                  ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator());
               }
 
               final orders = snapshot.data ?? [];
@@ -132,7 +136,8 @@ class AdminOrdersScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Orders will appear here once customers\nplace fabric and textile orders.',
+                        // ── Brand name updated ───────────────────
+                        'Orders will appear here once customers\nplace fabric orders on Phlakes Fabrics.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
                           color: colors.textSecondary,
@@ -198,10 +203,8 @@ class _AdminOrderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Order Header ───────────────────────────────────────
           Row(
             children: [
-              // Order ID badge
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -221,13 +224,10 @@ class _AdminOrderCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-
-              // Status chip
               AppStatusChip(
                 label: order.status.toUpperCase(),
                 tone: statusTone,
               ),
-
               if (order.escalatedToSuperAdmin) ...[
                 const SizedBox(width: 8),
                 const AppStatusChip(
@@ -235,10 +235,7 @@ class _AdminOrderCard extends StatelessWidget {
                   tone: AppStatusChipTone.error,
                 ),
               ],
-
               const Spacer(),
-
-              // Date
               Text(
                 order.formattedDate,
                 style: GoogleFonts.poppins(
@@ -250,7 +247,6 @@ class _AdminOrderCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Order Items Preview ────────────────────────────────
           if (order.items.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.all(10),
@@ -274,19 +270,23 @@ class _AdminOrderCard extends StatelessWidget {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: colors.brandPrimary.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(8),
+                            color: colors.brandPrimary
+                                .withOpacity(0.08),
+                            borderRadius:
+                                BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.texture_rounded,
                             size: 18,
-                            color: colors.brandPrimary.withOpacity(0.6),
+                            color: colors.brandPrimary
+                                .withOpacity(0.6),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
                               Text(
                                 name.toString(),
@@ -298,10 +298,12 @@ class _AdminOrderCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (fabricType.isNotEmpty || color.isNotEmpty)
+                              if (fabricType.isNotEmpty ||
+                                  color.isNotEmpty)
                                 Text(
                                   [
-                                    if (fabricType.isNotEmpty) fabricType,
+                                    if (fabricType.isNotEmpty)
+                                      fabricType,
                                     if (color.isNotEmpty) color,
                                   ].join(' · '),
                                   style: GoogleFonts.poppins(
@@ -347,7 +349,6 @@ class _AdminOrderCard extends StatelessWidget {
             const SizedBox(height: 10),
           ],
 
-          // ── Order Info Row ─────────────────────────────────────
           Row(
             children: [
               Icon(
@@ -445,7 +446,6 @@ class _AdminOrderCard extends StatelessWidget {
           const Divider(height: 1),
           const SizedBox(height: 12),
 
-          // ── Status Action Buttons ──────────────────────────────
           Text(
             'UPDATE STATUS',
             style: GoogleFonts.poppins(
@@ -518,7 +518,6 @@ class _AdminOrderCard extends StatelessWidget {
             ],
           ),
 
-          // ── Reassign Button (Super Admin only) ─────────────────
           if (isSuperAdmin) ...[
             const SizedBox(height: 10),
             SizedBox(
@@ -527,7 +526,8 @@ class _AdminOrderCard extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => AdminReassignmentScreen(order: order),
+                      builder: (_) =>
+                          AdminReassignmentScreen(order: order),
                     ),
                   );
                 },
@@ -540,7 +540,8 @@ class _AdminOrderCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                icon:
+                    const Icon(Icons.swap_horiz_rounded, size: 18),
                 label: Text(
                   'Reassign Order',
                   style: GoogleFonts.poppins(
@@ -582,9 +583,12 @@ class _StatusBtn extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: isActive ? color.withOpacity(0.15) : colors.surfaceAlt,
+          color: isActive
+              ? color.withOpacity(0.15)
+              : colors.surfaceAlt,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isActive ? color : colors.borderSoft,
@@ -604,7 +608,8 @@ class _StatusBtn extends StatelessWidget {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                fontWeight:
+                    isActive ? FontWeight.w700 : FontWeight.w500,
                 color: isActive ? color : colors.textSecondary,
               ),
             ),

@@ -10,7 +10,20 @@ extension BuildContextThemeX on BuildContext {
 
   AppThemeColors get appColors => AppTheme.colorsOf(this);
 
-  bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
-
+  bool get isDarkMode  => Theme.of(this).brightness == Brightness.dark;
   bool get isLightMode => Theme.of(this).brightness == Brightness.light;
+
+  // ── Luxury gradient helpers available anywhere ─────────────────
+  /// Gold gradient — primary CTA backgrounds, hero banners
+  LinearGradient get goldGradient => AppGradients.goldHorizontal;
+
+  /// Premium dark banner gradient
+  LinearGradient get premiumBannerGradient => AppGradients.premiumBanner;
+
+  /// Browse Fabrics card gradient
+  LinearGradient get browseFabricsGradient => AppGradients.browseFabrics;
+
+  /// Fabric Consultation card gradient
+  LinearGradient get fabricConsultationGradient =>
+      AppGradients.fabricConsultation;
 }

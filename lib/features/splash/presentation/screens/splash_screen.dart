@@ -16,54 +16,78 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  bool _navigated = false;
-  bool _booting = false;
+  bool    _navigated  = false;
+  bool    _booting    = false;
   String? _errorText;
 
   late final AnimationController _introController;
   late final AnimationController _pulseController;
+  late final AnimationController _shimmerController;
 
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _scaleAnimation;
   late final Animation<Offset> _textSlideAnimation;
   late final Animation<double> _pulseAnimation;
+  late final Animation<double> _shimmerAnimation;
 
   @override
   void initState() {
     super.initState();
 
     _introController = AnimationController(
-      vsync: this,
+      vsync:    this,
       duration: const Duration(milliseconds: 900),
     );
 
     _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      vsync:    this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    _shimmerController = AnimationController(
+      vsync:    this,
+      duration: const Duration(milliseconds: 2000),
     );
 
     _fadeAnimation = CurvedAnimation(
       parent: _introController,
-      curve: Curves.easeOut,
+      curve:  Curves.easeOut,
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.88, end: 1).animate(
-      CurvedAnimation(parent: _introController, curve: Curves.easeOutBack),
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1).animate(
+      CurvedAnimation(
+        parent: _introController,
+        curve:  Curves.easeOutBack,
+      ),
     );
 
     _textSlideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.10),
-      end: Offset.zero,
+      end:   Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _introController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _introController,
+        curve:  Curves.easeOutCubic,
+      ),
     );
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.06).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve:  Curves.easeInOut,
+      ),
+    );
+
+    _shimmerAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(
+        parent: _shimmerController,
+        curve:  Curves.easeInOut,
+      ),
     );
 
     _introController.forward();
     _pulseController.repeat(reverse: true);
+    _shimmerController.repeat();
     _start();
   }
 
@@ -148,54 +172,100 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _introController.dispose();
     _pulseController.dispose();
+    _shimmerController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: colors.scaffold,
       body: Container(
-        width: double.infinity,
+        width:  double.infinity,
         height: double.infinity,
-        // ── Background: light = silver-white paper, dark = deep black
+        // Luxury background
         decoration: BoxDecoration(
           gradient: isDark
               ? const LinearGradient(
                   colors: [
+                    Color(0xFF0B0B0B),
                     Color(0xFF111111),
-                    Color(0xFF1C1010), // very subtle red tint at bottom
+                    Color(0xFF0B0B0B),
                   ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end:   Alignment.bottomRight,
                 )
               : const LinearGradient(
                   colors: [
-                    Color(0xFFF8F6F3), // logo paper white
-                    Color(0xFFEFECE8), // slightly warmer at bottom
+                    Color(0xFFFAFAFA),
+                    Color(0xFFF5F0E8), // warm ivory bottom
                   ],
                   begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  end:   Alignment.bottomCenter,
                 ),
         ),
-        child: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: _errorText == null
-                      ? _buildLoadingContent(colors, isDark)
-                      : _buildErrorContent(colors),
+        child: Stack(
+          children: [
+            // ── Background gold glow ─────────────────────────────
+            Positioned(
+              top:  -60,
+              left: -60,
+              child: Container(
+                width:  200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppPalette.primary.withOpacity(
+                    isDark ? 0.06 : 0.08,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color:       AppPalette.primary.withOpacity(
+                        isDark ? 0.10 : 0.06,
+                      ),
+                      blurRadius:  80,
+                      spreadRadius: 20,
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
+            Positioned(
+              bottom: -60,
+              right:  -60,
+              child: Container(
+                width:  200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppPalette.primaryDark.withOpacity(
+                    isDark ? 0.08 : 0.06,
+                  ),
+                ),
+              ),
+            ),
+
+            SafeArea(
+              child: Center(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: _errorText == null
+                          ? _buildLoadingContent(colors, isDark)
+                          : _buildErrorContent(colors),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -205,103 +275,141 @@ class _SplashScreenState extends State<SplashScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Animated Logo ───────────────────────────────────────────
+        // ── Animated Gold Logo ───────────────────────────────────
         ScaleTransition(
           scale: _pulseAnimation,
-          child: _ITEXLogo(colors: colors, isDark: isDark),
+          child: _PhlakesLogo(isDark: isDark),
         ),
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 32),
 
-        // ── App Name ────────────────────────────────────────────────
+        // ── Brand Name ───────────────────────────────────────────
         SlideTransition(
           position: _textSlideAnimation,
           child: Column(
             children: [
-              // "ISMAIL" in black, "TEX" in red — mirrors the actual logo
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'ISMAIL',
-                      style: GoogleFonts.montserrat(
-                        color: isDark
-                            ? Colors.white
-                            : const Color(0xFF1A1A1A),
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'TEX',
-                      style: GoogleFonts.montserrat(
-                        color: colors.brandPrimary,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ],
+              Text(
+                'PHLAKES',
+                style: GoogleFonts.cinzel(
+                  color:         isDark ? Colors.white : AppPalette.secondary,
+                  fontSize:      32,
+                  fontWeight:    FontWeight.w900,
+                  letterSpacing: 4,
                 ),
               ),
-              const SizedBox(height: 6),
-              // Divider line — mirrors the red line under tagline in logo
+              // Gold shimmer "FABRICS"
+              AnimatedBuilder(
+                animation: _shimmerAnimation,
+                builder: (context, child) {
+                  return ShaderMask(
+                    shaderCallback: (bounds) => LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end:   Alignment.centerRight,
+                      colors: const [
+                        AppPalette.primaryDark,
+                        AppPalette.primary,
+                        AppPalette.primaryLight,
+                        AppPalette.premiumGold,
+                        AppPalette.primaryLight,
+                        AppPalette.primary,
+                        AppPalette.primaryDark,
+                      ],
+                      stops: [
+                        0.0,
+                        (_shimmerAnimation.value - 0.3)
+                            .clamp(0.0, 1.0),
+                        (_shimmerAnimation.value)
+                            .clamp(0.0, 1.0),
+                        (_shimmerAnimation.value + 0.1)
+                            .clamp(0.0, 1.0),
+                        (_shimmerAnimation.value + 0.2)
+                            .clamp(0.0, 1.0),
+                        (_shimmerAnimation.value + 0.4)
+                            .clamp(0.0, 1.0),
+                        1.0,
+                      ],
+                    ).createShader(bounds),
+                    child: Text(
+                      'FABRICS',
+                      style: GoogleFonts.cinzel(
+                        color:         Colors.white,
+                        fontSize:      22,
+                        fontWeight:    FontWeight.w900,
+                        letterSpacing: 8,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
+              // Gold divider
               Container(
-                width: 48,
-                height: 2.5,
+                width:  80,
+                height: 2,
                 decoration: BoxDecoration(
-                  color: colors.brandPrimary,
+                  gradient: const LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      AppPalette.primaryDark,
+                      AppPalette.primary,
+                      AppPalette.primaryLight,
+                      AppPalette.primary,
+                      AppPalette.primaryDark,
+                      Colors.transparent,
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 8),
-              // Tagline from logo
+              const SizedBox(height: 10),
               Text(
-                'We weave a better tomorrow.',
+                'Luxury African Fabrics & Textiles',
                 style: GoogleFonts.poppins(
-                  color: isDark
+                  color:     isDark
                       ? colors.textSecondary
-                      : const Color(0xFF4A4A4A),
-                  fontSize: 13,
+                      : const Color(0xFF5A5A5A),
+                  fontSize:  13,
                   fontStyle: FontStyle.italic,
                   letterSpacing: 0.3,
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                'A quality you can trust.',
-                style: GoogleFonts.poppins(
-                  color: colors.brandPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  fontStyle: FontStyle.italic,
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [AppPalette.primaryDark, AppPalette.primary],
+                ).createShader(bounds),
+                child: Text(
+                  'Quality you can feel.',
+                  style: GoogleFonts.poppins(
+                    color:      Colors.white,
+                    fontSize:   12,
+                    fontWeight: FontWeight.w600,
+                    fontStyle:  FontStyle.italic,
+                  ),
                 ),
               ),
             ],
           ),
         ),
 
-        const SizedBox(height: 36),
+        const SizedBox(height: 40),
 
-        // ── Loading indicator ───────────────────────────────────────
+        // ── Gold Loading Indicator ───────────────────────────────
         TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0.5, end: 1),
+          tween:    Tween<double>(begin: 0.4, end: 1),
           duration: const Duration(milliseconds: 800),
-          curve: Curves.easeInOut,
+          curve:    Curves.easeInOut,
           builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: child,
-            );
+            return Opacity(opacity: value, child: child);
           },
           child: SizedBox(
-            width: 28,
+            width:  28,
             height: 28,
             child: CircularProgressIndicator(
-              color: colors.brandPrimary,
-              strokeWidth: 2.8,
-              backgroundColor: colors.brandPrimary.withOpacity(0.15),
+              color:           AppPalette.primary,
+              strokeWidth:     2.5,
+              backgroundColor:
+                  AppPalette.primary.withOpacity(0.15),
             ),
           ),
         ),
@@ -314,11 +422,11 @@ class _SplashScreenState extends State<SplashScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 110,
+          width:  110,
           height: 110,
           decoration: BoxDecoration(
-            color: colors.error.withOpacity(0.08),
-            shape: BoxShape.circle,
+            color:  colors.error.withOpacity(0.08),
+            shape:  BoxShape.circle,
             border: Border.all(
               color: colors.error.withOpacity(0.25),
               width: 2,
@@ -328,17 +436,17 @@ class _SplashScreenState extends State<SplashScreen>
             child: Icon(
               Icons.wifi_off_rounded,
               color: colors.error,
-              size: 44,
+              size:  44,
             ),
           ),
         ),
         const SizedBox(height: 24),
         Text(
-          'Unable to load IsmailTex',
+          'Unable to load Phlakes Fabrics',
           style: GoogleFonts.poppins(
-            color: colors.textPrimary,
+            color:      colors.textPrimary,
             fontWeight: FontWeight.w700,
-            fontSize: 20,
+            fontSize:   20,
           ),
           textAlign: TextAlign.center,
         ),
@@ -347,18 +455,34 @@ class _SplashScreenState extends State<SplashScreen>
           _errorText!,
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
-            color: colors.textSecondary,
+            color:    colors.textSecondary,
             fontSize: 12.5,
-            height: 1.6,
+            height:   1.6,
           ),
         ),
         const SizedBox(height: 24),
-        ElevatedButton.icon(
-          onPressed: _retry,
-          icon: const Icon(Icons.refresh_rounded),
-          label: Text(
-            'Retry',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppPalette.primaryDark, AppPalette.primary],
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ElevatedButton.icon(
+            onPressed: _retry,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor:     Colors.transparent,
+              foregroundColor: AppPalette.secondary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon:  const Icon(Icons.refresh_rounded),
+            label: Text(
+              'Retry',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+            ),
           ),
         ),
       ],
@@ -366,13 +490,12 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ── ITEX Logo Widget ───────────────────────────────────────────────────────────
+// ── Phlakes Logo Widget ────────────────────────────────────────────────────────
 
-class _ITEXLogo extends StatelessWidget {
-  final AppThemeColors colors;
+class _PhlakesLogo extends StatelessWidget {
   final bool isDark;
 
-  const _ITEXLogo({required this.colors, required this.isDark});
+  const _PhlakesLogo({required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -381,84 +504,100 @@ class _ITEXLogo extends StatelessWidget {
       children: [
         // Outer glow ring
         Container(
-          width: 130,
-          height: 130,
+          width:  140,
+          height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: colors.brandPrimary.withOpacity(isDark ? 0.08 : 0.06),
+            color: AppPalette.primary.withOpacity(
+              isDark ? 0.06 : 0.08,
+            ),
             border: Border.all(
-              color: colors.brandPrimary.withOpacity(0.20),
+              color: AppPalette.primary.withOpacity(
+                isDark ? 0.25 : 0.15,
+              ),
               width: 1.5,
             ),
           ),
         ),
-        // Inner logo circle — red background mirrors brand
+        // Middle ring
         Container(
-          width: 90,
-          height: 90,
+          width:  108,
+          height: 108,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
+            color: AppPalette.primary.withOpacity(
+              isDark ? 0.04 : 0.06,
+            ),
+            border: Border.all(
+              color: AppPalette.primary.withOpacity(
+                isDark ? 0.20 : 0.12,
+              ),
+              width: 1,
+            ),
+          ),
+        ),
+        // Inner gold circle with "PF"
+        Container(
+          width:  82,
+          height: 82,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
               colors: [
-                AppPalette.primary,       // #CC2222
-                AppPalette.primaryDark,   // #A61818
+                AppPalette.primaryDark,
+                AppPalette.primary,
+                AppPalette.primaryLight,
               ],
               begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              end:   Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppPalette.primary.withOpacity(isDark ? 0.50 : 0.35),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 6),
+                color:       AppPalette.primary.withOpacity(
+                  isDark ? 0.55 : 0.35,
+                ),
+                blurRadius:  24,
+                spreadRadius: 3,
+                offset:      const Offset(0, 6),
+              ),
+              BoxShadow(
+                color:       AppPalette.primaryLight.withOpacity(0.20),
+                blurRadius:  12,
+                spreadRadius: 0,
+                offset:      Offset.zero,
               ),
             ],
           ),
           child: Center(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // "iT" styled like the logo icon
-                Text(
-                  'iT',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
-                  ),
-                ),
-                // Small dot above the "i" — mirrors the dot in the logo icon
-                Positioned(
-                  top: 14,
-                  right: 18,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
+            child: Text(
+              'PF',
+              style: GoogleFonts.cinzel(
+                color:         AppPalette.secondary,
+                fontSize:      28,
+                fontWeight:    FontWeight.w900,
+                letterSpacing: 2,
+              ),
             ),
           ),
         ),
-        // Brand black swoosh bottom-left — subtle, mirrors logo swoosh
+        // Dotted gold ring detail (top arc)
         Positioned(
-          bottom: 10,
-          left: 10,
-          child: Container(
-            width: 28,
-            height: 5,
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withOpacity(0.15)
-                  : const Color(0xFF1A1A1A).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(3),
-            ),
+          top: 6,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(7, (i) {
+              return Container(
+                width:  4,
+                height: 4,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppPalette.primary.withOpacity(
+                    isDark ? 0.55 : 0.35,
+                  ),
+                ),
+              );
+            }),
           ),
         ),
       ],

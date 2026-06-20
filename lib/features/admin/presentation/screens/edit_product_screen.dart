@@ -1,9 +1,11 @@
+// lib/features/admin/presentation/screens/edit_product_screen.dart
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/core/constants/app_constants.dart';
+import 'package:pfb/core/theme/app_theme.dart';
 import 'package:pfb/models/product_model.dart';
 import 'package:pfb/services/cloudinary_service.dart';
 import 'package:pfb/services/firebase_service.dart';
@@ -24,7 +26,8 @@ class EditProductScreen extends StatefulWidget {
   });
 
   @override
-  State<EditProductScreen> createState() => _EditProductScreenState();
+  State<EditProductScreen> createState() =>
+      _EditProductScreenState();
 }
 
 class _EditProductScreenState extends State<EditProductScreen> {
@@ -59,20 +62,24 @@ class _EditProductScreenState extends State<EditProductScreen> {
   bool _hasValidImage(String url) {
     final value = url.trim();
     return value.isNotEmpty &&
-        (value.startsWith('http://') || value.startsWith('https://'));
+        (value.startsWith('http://') ||
+            value.startsWith('https://'));
   }
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.product.name);
-    _descCtrl = TextEditingController(text: widget.product.description);
-    _priceCtrl = TextEditingController(text: widget.product.price.toString());
-    _variantsCtrl =
-        TextEditingController(text: widget.product.variants.join(', '));
-    _stockQtyCtrl =
-        TextEditingController(text: widget.product.stockQuantity.toString());
-    _promoTextCtrl = TextEditingController(text: widget.product.promoText);
+    _descCtrl =
+        TextEditingController(text: widget.product.description);
+    _priceCtrl =
+        TextEditingController(text: widget.product.price.toString());
+    _variantsCtrl = TextEditingController(
+        text: widget.product.variants.join(', '));
+    _stockQtyCtrl = TextEditingController(
+        text: widget.product.stockQuantity.toString());
+    _promoTextCtrl =
+        TextEditingController(text: widget.product.promoText);
     _promoDiscountCtrl = TextEditingController(
       text: widget.product.promoDiscountPercent.toString(),
     );
@@ -144,15 +151,18 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
 
     final price = double.tryParse(_priceCtrl.text.trim());
-    final stockQty = int.tryParse(_stockQtyCtrl.text.trim()) ?? 0;
-    final promoDiscount = double.tryParse(_promoDiscountCtrl.text.trim()) ?? 0;
+    final stockQty =
+        int.tryParse(_stockQtyCtrl.text.trim()) ?? 0;
+    final promoDiscount =
+        double.tryParse(_promoDiscountCtrl.text.trim()) ?? 0;
 
     if (price == null ||
         _nameCtrl.text.trim().isEmpty ||
         _descCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please fill product name, description and valid price'),
+          content: Text(
+              'Please fill product name, description and valid price'),
         ),
       );
       return;
@@ -164,7 +174,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
       String imageUrl = widget.product.imageUrl;
 
       if (_selectedImage != null) {
-        imageUrl = await _cloudinaryService.uploadImage(_selectedImage!);
+        imageUrl =
+            await _cloudinaryService.uploadImage(_selectedImage!);
       }
 
       final categories = _selectedCategories.toSet().toList();
@@ -279,8 +290,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   controller: _priceCtrl,
                   hintText: 'Price',
                   enabled: _canEdit,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType
+                      .numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -294,25 +305,31 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 StreamBuilder<List<String>>(
                   stream: _firebaseService.watchCategories(),
                   builder: (context, snapshot) {
-                    final categories = snapshot.data ?? const ['General'];
+                    final categories =
+                        snapshot.data ?? const ['General'];
 
                     return Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: categories.map((category) {
-                        final selected = _selectedCategories.contains(category);
+                        final selected =
+                            _selectedCategories.contains(category);
 
                         return FilterChip(
                           label: Text(category),
                           selected: selected,
                           onSelected: _canEdit
-                              ? (value) => _toggleCategory(category, value)
+                              ? (value) =>
+                                  _toggleCategory(category, value)
                               : null,
                           selectedColor: colors.brandPrimary,
                           backgroundColor: colors.surfaceAlt,
                           disabledColor: colors.surfaceAlt,
                           labelStyle: GoogleFonts.poppins(
-                            color: selected ? Colors.white : colors.textPrimary,
+                            // ── Black text on gold chip ─────────
+                            color: selected
+                                ? AppPalette.secondary
+                                : colors.textPrimary,
                             fontWeight: FontWeight.w600,
                           ),
                           side: BorderSide(
@@ -349,39 +366,47 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   controller: _promoDiscountCtrl,
                   hintText: 'Promo discount %',
                   enabled: _canEdit,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType
+                      .numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: colors.brandPrimary,
                   value: _featured,
-                  onChanged: _canEdit ? (v) => setState(() => _featured = v) : null,
+                  onChanged: _canEdit
+                      ? (v) => setState(() => _featured = v)
+                      : null,
                   title: Text(
                     'Featured',
-                    style: GoogleFonts.poppins(color: colors.textPrimary),
+                    style: GoogleFonts.poppins(
+                        color: colors.textPrimary),
                   ),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: colors.brandPrimary,
                   value: _isTrending,
-                  onChanged:
-                      _canEdit ? (v) => setState(() => _isTrending = v) : null,
+                  onChanged: _canEdit
+                      ? (v) => setState(() => _isTrending = v)
+                      : null,
                   title: Text(
                     'Trending',
-                    style: GoogleFonts.poppins(color: colors.textPrimary),
+                    style: GoogleFonts.poppins(
+                        color: colors.textPrimary),
                   ),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: colors.brandPrimary,
                   value: _inStock,
-                  onChanged: _canEdit ? (v) => setState(() => _inStock = v) : null,
+                  onChanged: _canEdit
+                      ? (v) => setState(() => _inStock = v)
+                      : null,
                   title: Text(
                     'In stock',
-                    style: GoogleFonts.poppins(color: colors.textPrimary),
+                    style: GoogleFonts.poppins(
+                        color: colors.textPrimary),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -397,13 +422,16 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
                       child: _selectedImage != null
-                          ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                          ? Image.file(_selectedImage!,
+                              fit: BoxFit.cover)
                           : _hasValidImage(widget.product.imageUrl)
                               ? Image.network(
                                   widget.product.imageUrl,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    color: context.colorScheme.surfaceContainerHighest,
+                                  errorBuilder: (_, __, ___) =>
+                                      Container(
+                                    color: context.colorScheme
+                                        .surfaceContainerHighest,
                                     child: Center(
                                       child: Icon(
                                         Icons.image_not_supported,
@@ -413,7 +441,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                   ),
                                 )
                               : Container(
-                                  color: context.colorScheme.surfaceContainerHighest,
+                                  color: context.colorScheme
+                                      .surfaceContainerHighest,
                                   child: Center(
                                     child: Icon(
                                       Icons.image_not_supported,
@@ -431,18 +460,25 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     onPressed: (_loading || !_canEdit) ? null : _save,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.brandPrimary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      // ── Black text on gold button ────────────
+                      foregroundColor: AppPalette.secondary,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 16),
                     ),
                     child: _loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              // ── Black spinner on gold ────────
+                              color: AppPalette.secondary,
+                            ),
                           )
                         : Text(
                             'Save Changes',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                            style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w700),
                           ),
                   ),
                 ),

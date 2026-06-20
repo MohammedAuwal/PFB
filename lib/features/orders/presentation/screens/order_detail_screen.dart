@@ -1,3 +1,4 @@
+// lib/features/orders/presentation/screens/order_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,15 +7,14 @@ import 'package:pfb/models/order_model.dart';
 import 'package:pfb/shared/widgets/app_surface_card.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// IsmailTex Order Detail Screen
+// Phlakes Fabrics Order Detail Screen
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class OrderDetailScreen extends StatelessWidget {
   final OrderModel order;
 
-  const OrderDetailScreen({super.key, required this.order});
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  const OrderDetailScreen(
+      {super.key, required this.order});
 
   Color _statusColor(String status, dynamic colors) {
     switch (status.toLowerCase()) {
@@ -56,15 +56,18 @@ class OrderDetailScreen extends StatelessWidget {
   String _formatDate(String? rawDate) {
     if (rawDate == null || rawDate.isEmpty) return 'N/A';
     try {
-      final date = DateTime.parse(rawDate);
+      final date   = DateTime.parse(rawDate);
       final months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December',
+        'January', 'February', 'March', 'April',
+        'May', 'June', 'July', 'August',
+        'September', 'October', 'November', 'December',
       ];
-      final hour = date.hour;
-      final minute = date.minute.toString().padLeft(2, '0');
-      final ampm = hour >= 12 ? 'PM' : 'AM';
-      final hour12 = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      final hour   = date.hour;
+      final minute =
+          date.minute.toString().padLeft(2, '0');
+      final ampm   = hour >= 12 ? 'PM' : 'AM';
+      final hour12 =
+          hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
       return '${date.day} ${months[date.month - 1]} ${date.year} · $hour12:$minute $ampm';
     } catch (_) {
       return rawDate;
@@ -74,16 +77,15 @@ class OrderDetailScreen extends StatelessWidget {
   bool _hasValidImage(String url) {
     final v = url.trim();
     return v.isNotEmpty &&
-        (v.startsWith('http://') || v.startsWith('https://'));
+        (v.startsWith('http://') ||
+            v.startsWith('https://'));
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppTheme.colorsOf(context);
+    final colors      = AppTheme.colorsOf(context);
     final statusColor = _statusColor(order.status, colors);
-    final statusIcon = _statusIcon(order.status);
+    final statusIcon  = _statusIcon(order.status);
 
     final shortId = order.id.length > 12
         ? order.id.substring(0, 12).toUpperCase()
@@ -93,7 +95,7 @@ class OrderDetailScreen extends StatelessWidget {
       backgroundColor: colors.scaffold,
       body: CustomScrollView(
         slivers: [
-          // ── SLIVER APP BAR ───────────────────────────────────────
+          // ── SLIVER APP BAR ─────────────────────────────────
           SliverAppBar(
             pinned: true,
             expandedHeight: 200,
@@ -120,13 +122,13 @@ class OrderDetailScreen extends StatelessWidget {
               ),
             ),
             actions: [
-              // Copy order ID
               GestureDetector(
                 onTap: () {
                   Clipboard.setData(
                     ClipboardData(text: order.id),
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
                     SnackBar(
                       content: Text(
                         'Order ID copied!',
@@ -211,17 +213,20 @@ class OrderDetailScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   'Order #$shortId',
-                                  style: GoogleFonts.poppins(
+                                  style:
+                                      GoogleFonts.poppins(
                                     fontWeight:
                                         FontWeight.w900,
                                     fontSize: 18,
-                                    color: colors.textPrimary,
+                                    color:
+                                        colors.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Container(
                                   padding:
-                                      const EdgeInsets.symmetric(
+                                      const EdgeInsets
+                                          .symmetric(
                                     horizontal: 10,
                                     vertical: 4,
                                   ),
@@ -229,17 +234,19 @@ class OrderDetailScreen extends StatelessWidget {
                                     color: statusColor
                                         .withOpacity(0.15),
                                     borderRadius:
-                                        BorderRadius.circular(
-                                            20),
+                                        BorderRadius
+                                            .circular(20),
                                     border: Border.all(
                                       color: statusColor
-                                          .withOpacity(0.35),
+                                          .withOpacity(
+                                              0.35),
                                     ),
                                   ),
                                   child: Text(
                                     order.status
                                         .toUpperCase(),
-                                    style: GoogleFonts.poppins(
+                                    style:
+                                        GoogleFonts.poppins(
                                       color: statusColor,
                                       fontSize: 11,
                                       fontWeight:
@@ -268,7 +275,7 @@ class OrderDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // ── CONTENT ──────────────────────────────────────────────
+          // ── CONTENT ────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -276,7 +283,6 @@ class OrderDetailScreen extends StatelessWidget {
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
-                  // ── Delivery Progress ──────────────────────────
                   if (order.status.toLowerCase() !=
                           'cancelled' &&
                       order.status.toLowerCase() !=
@@ -289,38 +295,28 @@ class OrderDetailScreen extends StatelessWidget {
                           'delivered')
                     const SizedBox(height: 16),
 
-                  // ── Order Details Card ─────────────────────────
                   _buildDetailCard(colors, shortId),
-
                   const SizedBox(height: 14),
 
-                  // ── Delivery Info Card ─────────────────────────
                   if (order.deliveryAddress.isNotEmpty)
                     _buildDeliveryCard(colors),
-
                   if (order.deliveryAddress.isNotEmpty)
                     const SizedBox(height: 14),
 
-                  // ── Items Ordered ──────────────────────────────
                   _buildItemsCard(colors),
-
                   const SizedBox(height: 14),
 
-                  // ── Price Breakdown ────────────────────────────
                   _buildPriceCard(colors),
-
                   const SizedBox(height: 14),
 
-                  // ── Payment Info ───────────────────────────────
-                  if ((order.paymentReference ?? '').isNotEmpty)
+                  if ((order.paymentReference ?? '')
+                      .isNotEmpty)
                     _buildPaymentCard(colors),
-
-                  if ((order.paymentReference ?? '').isNotEmpty)
+                  if ((order.paymentReference ?? '')
+                      .isNotEmpty)
                     const SizedBox(height: 14),
 
-                  // ── Help Actions ───────────────────────────────
                   _buildHelpSection(colors, context),
-
                   const SizedBox(height: 32),
                 ],
               ),
@@ -336,25 +332,20 @@ class OrderDetailScreen extends StatelessWidget {
   Widget _buildDeliveryProgress(dynamic colors) {
     final stages = [
       _ProgressStage(
-        label: 'Order Placed',
-        icon: Icons.shopping_bag_rounded,
-      ),
+          label: 'Order Placed',
+          icon: Icons.shopping_bag_rounded),
       _ProgressStage(
-        label: 'Confirmed',
-        icon: Icons.verified_rounded,
-      ),
+          label: 'Confirmed',
+          icon: Icons.verified_rounded),
       _ProgressStage(
-        label: 'Shipped',
-        icon: Icons.local_shipping_rounded,
-      ),
+          label: 'Shipped',
+          icon: Icons.local_shipping_rounded),
       _ProgressStage(
-        label: 'Delivery',
-        icon: Icons.delivery_dining_rounded,
-      ),
+          label: 'Delivery',
+          icon: Icons.delivery_dining_rounded),
       _ProgressStage(
-        label: 'Delivered',
-        icon: Icons.check_circle_rounded,
-      ),
+          label: 'Delivered',
+          icon: Icons.check_circle_rounded),
     ];
 
     int currentStage = 0;
@@ -401,22 +392,22 @@ class OrderDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Stages
           Row(
-            children: List.generate(stages.length, (i) {
-              final done = i <= currentStage;
+            children:
+                List.generate(stages.length, (i) {
+              final done   = i <= currentStage;
               final active = i == currentStage;
 
               return Expanded(
                 child: Column(
                   children: [
-                    // Icon circle
                     AnimatedContainer(
-                      duration:
-                          const Duration(milliseconds: 300),
-                      width: active ? 44 : 36,
+                      duration: const Duration(
+                          milliseconds: 300),
+                      width:  active ? 44 : 36,
                       height: active ? 44 : 36,
                       decoration: BoxDecoration(
+                        // ── Gold when done ───────────────
                         color: done
                             ? colors.brandPrimary
                             : colors.borderSoft,
@@ -433,16 +424,14 @@ class OrderDetailScreen extends StatelessWidget {
                       ),
                       child: Icon(
                         stages[i].icon,
+                        // ── Black icon on gold ───────────
                         color: done
-                            ? Colors.white
+                            ? AppPalette.secondary
                             : colors.textSecondary,
                         size: active ? 20 : 16,
                       ),
                     ),
-
                     const SizedBox(height: 6),
-
-                    // Label
                     Text(
                       stages[i].label,
                       textAlign: TextAlign.center,
@@ -456,16 +445,12 @@ class OrderDetailScreen extends StatelessWidget {
                             : FontWeight.w500,
                       ),
                     ),
-
-                    // Connector line
-                    if (i < stages.length - 1) ...[],
                   ],
                 ),
               );
             }),
           ),
 
-          // Connector lines between stages
           Padding(
             padding: const EdgeInsets.symmetric(
                 horizontal: 24),
@@ -520,9 +505,10 @@ class OrderDetailScreen extends StatelessWidget {
             value: _formatDate(order.createdAt),
             colors: colors,
           ),
+          // ── Brand name updated ─────────────────────────────
           _DetailRow(
             label: 'Platform',
-            value: 'IsmailTex',
+            value: 'Phlakes Fabrics',
             colors: colors,
           ),
           _DetailRow(
@@ -608,11 +594,10 @@ class OrderDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           ...order.items.map((item) {
-            final name =
-                (item['name'] ?? '').toString();
-            final price =
+            final name     = (item['name'] ?? '').toString();
+            final price    =
                 ((item['price'] ?? 0) as num).toDouble();
-            final qty = (item['qty'] ?? 1) as int;
+            final qty      = (item['qty'] ?? 1) as int;
             final imageUrl =
                 (item['imageUrl'] ?? '').toString();
             final fabricType =
@@ -625,12 +610,11 @@ class OrderDetailScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: colors.surfaceAlt,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: colors.borderSoft),
+                border:
+                    Border.all(color: colors.borderSoft),
               ),
               child: Row(
                 children: [
-                  // Image
                   ClipRRect(
                     borderRadius:
                         BorderRadius.circular(10),
@@ -650,8 +634,6 @@ class OrderDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-
-                  // Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment:
@@ -688,8 +670,6 @@ class OrderDetailScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Subtotal
                   Text(
                     '₦${subtotal.toStringAsFixed(0)}',
                     style: GoogleFonts.poppins(
@@ -728,7 +708,7 @@ class OrderDetailScreen extends StatelessWidget {
           (((item['price'] ?? 0) as num).toDouble() *
               ((item['qty'] ?? 1) as int)),
     );
-    final deliveryFee = order.deliveryFee ?? 0;
+    final deliveryFee    = order.deliveryFee    ?? 0;
     final couponDiscount = order.couponDiscount ?? 0;
 
     return AppSurfaceCard(
@@ -744,14 +724,14 @@ class OrderDetailScreen extends StatelessWidget {
           const SizedBox(height: 14),
           _PriceRow(
             label: 'Items Subtotal',
-            value:
-                '₦${itemsTotal.toStringAsFixed(0)}',
+            value: '₦${itemsTotal.toStringAsFixed(0)}',
             colors: colors,
           ),
           if (deliveryFee > 0)
             _PriceRow(
               label: 'Delivery Fee',
-              value: '₦${deliveryFee.toStringAsFixed(0)}',
+              value:
+                  '₦${deliveryFee.toStringAsFixed(0)}',
               colors: colors,
             ),
           if (couponDiscount > 0)
@@ -829,14 +809,14 @@ class OrderDetailScreen extends StatelessWidget {
   Widget _buildHelpSection(
       dynamic colors, BuildContext context) {
     return AppSurfaceCard(
-      color: colors.cream,
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text('🧵', style: const TextStyle(fontSize: 20)),
+              const Text('🧵',
+                  style: TextStyle(fontSize: 20)),
               const SizedBox(width: 8),
               Text(
                 'Need Help?',
@@ -850,7 +830,8 @@ class OrderDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Contact IsmailTex support for order issues, returns, or tailoring inquiries.',
+            // ── Brand name updated ─────────────────────────
+            'Contact Phlakes Fabrics support for order issues, returns, or tailoring inquiries.',
             style: GoogleFonts.poppins(
               fontSize: 12,
               color: colors.textSecondary,
@@ -866,7 +847,8 @@ class OrderDetailScreen extends StatelessWidget {
                     ScaffoldMessenger.of(context)
                         .showSnackBar(
                       const SnackBar(
-                        content: Text('Opening WhatsApp...'),
+                        content:
+                            Text('Opening WhatsApp...'),
                       ),
                     );
                   },
@@ -912,24 +894,19 @@ class OrderDetailScreen extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Local helper models and widgets
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _ProgressStage {
-  final String label;
+  final String   label;
   final IconData icon;
-
-  const _ProgressStage({
-    required this.label,
-    required this.icon,
-  });
+  const _ProgressStage(
+      {required this.label, required this.icon});
 }
 
 class _CardHeader extends StatelessWidget {
   final IconData icon;
-  final String title;
-  final dynamic colors;
+  final String   title;
+  final dynamic  colors;
 
   const _CardHeader({
     required this.icon,
@@ -944,7 +921,8 @@ class _CardHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: colors.brandPrimary.withOpacity(0.10),
+            color:
+                colors.brandPrimary.withOpacity(0.10),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -968,11 +946,11 @@ class _CardHeader extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
+  final String  label;
+  final String  value;
   final dynamic colors;
-  final bool isBold;
-  final Color? valueColor;
+  final bool    isBold;
+  final Color?  valueColor;
 
   const _DetailRow({
     required this.label,
@@ -1018,10 +996,10 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _PriceRow extends StatelessWidget {
-  final String label;
-  final String value;
+  final String  label;
+  final String  value;
   final dynamic colors;
-  final Color? valueColor;
+  final Color?  valueColor;
 
   const _PriceRow({
     required this.label,

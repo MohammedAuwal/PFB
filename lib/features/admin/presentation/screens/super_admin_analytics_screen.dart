@@ -1,3 +1,4 @@
+// lib/features/admin/presentation/screens/super_admin_analytics_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/core/constants/app_constants.dart';
@@ -22,7 +23,8 @@ class SuperAdminAnalyticsScreen extends StatefulWidget {
       _SuperAdminAnalyticsScreenState();
 }
 
-class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
+class _SuperAdminAnalyticsScreenState
+    extends State<SuperAdminAnalyticsScreen> {
   final FirebaseService _firebaseService = FirebaseService();
 
   AnalyticsRange _range = AnalyticsRange.all;
@@ -31,8 +33,6 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
   String _selectedState = 'All';
   String _selectedAdmin = 'All';
   String _selectedArea = 'All';
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
 
   DateTime _orderDate(OrderModel order) {
     return DateTime.tryParse(order.createdAt) ?? DateTime(2000);
@@ -77,13 +77,16 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
 
   bool _matchesOrderFilters(OrderModel order) {
     if (!_inRange(_orderDate(order))) return false;
-    if (_selectedState != 'All' && order.assignedAdminState != _selectedState) {
+    if (_selectedState != 'All' &&
+        order.assignedAdminState != _selectedState) {
       return false;
     }
-    if (_selectedAdmin != 'All' && order.assignedAdminName != _selectedAdmin) {
+    if (_selectedAdmin != 'All' &&
+        order.assignedAdminName != _selectedAdmin) {
       return false;
     }
-    if (_selectedArea != 'All' && order.assignedAdminArea != _selectedArea) {
+    if (_selectedArea != 'All' &&
+        order.assignedAdminArea != _selectedArea) {
       return false;
     }
     return true;
@@ -142,7 +145,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
     for (final order in orders) {
       if (order.status != 'delivered') continue;
       for (final item in order.items) {
-        final fabric = (item['fabricType'] ?? 'General').toString().trim();
+        final fabric =
+            (item['fabricType'] ?? 'General').toString().trim();
         final price = ((item['price'] ?? 0) as num).toDouble() *
             ((item['qty'] ?? 1) as int);
         map[fabric] = (map[fabric] ?? 0) + price;
@@ -155,7 +159,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
     final map = <String, int>{};
     for (final order in orders) {
       for (final item in order.items) {
-        final fabric = (item['fabricType'] ?? 'General').toString().trim();
+        final fabric =
+            (item['fabricType'] ?? 'General').toString().trim();
         map[fabric] = (map[fabric] ?? 0) + 1;
       }
     }
@@ -197,11 +202,13 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
           child: DropdownButton<String>(
             value: value,
             dropdownColor: colors.surfaceAlt,
-            style: GoogleFonts.poppins(color: colors.textPrimary, fontSize: 12),
+            style: GoogleFonts.poppins(
+                color: colors.textPrimary, fontSize: 12),
             iconEnabledColor: colors.iconPrimary,
             isExpanded: true,
             hint: Text(label,
-                style: GoogleFonts.poppins(color: colors.textSecondary)),
+                style: GoogleFonts.poppins(
+                    color: colors.textSecondary)),
             items: items
                 .map((e) => DropdownMenuItem<String>(
                       value: e,
@@ -235,8 +242,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final isSuperAdmin =
-        AppConstants.isSuperAdminUid(_firebaseService.currentUser?.uid);
+    final isSuperAdmin = AppConstants.isSuperAdminUid(
+        _firebaseService.currentUser?.uid);
 
     return AppPageScaffold(
       title: 'Analytics Dashboard',
@@ -244,7 +251,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
           ? Center(
               child: Text(
                 'Only super admins can view analytics.',
-                style: GoogleFonts.poppins(color: colors.textSecondary),
+                style:
+                    GoogleFonts.poppins(color: colors.textSecondary),
               ),
             )
           : StreamBuilder<List<OrderModel>>(
@@ -303,8 +311,9 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                     final processingOrders = filteredOrders
                         .where((e) => e.status == 'processing')
                         .toList();
-                    final shippedOrders =
-                        filteredOrders.where((e) => e.status == 'shipped').toList();
+                    final shippedOrders = filteredOrders
+                        .where((e) => e.status == 'shipped')
+                        .toList();
 
                     final totalSales = deliveredOrders.fold<double>(
                       0,
@@ -317,7 +326,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                         .length;
 
                     final totalReassignments = filteredOrders
-                        .where((e) => e.assignmentMethod == 'manual_reassignment')
+                        .where((e) =>
+                            e.assignmentMethod == 'manual_reassignment')
                         .length;
 
                     final orderCompletionRate = totalOrders == 0
@@ -340,13 +350,15 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                       filteredOrders,
                       (o) => o.assignedAdminArea,
                     );
-                    final salesByFabric = _salesByFabricType(filteredOrders);
+                    final salesByFabric =
+                        _salesByFabricType(filteredOrders);
 
                     final ordersByAdmin = _countOrdersByField(
                       filteredOrders,
                       (o) => o.assignedAdminName,
                     );
-                    final ordersByFabric = _ordersByFabricType(filteredOrders);
+                    final ordersByFabric =
+                        _ordersByFabricType(filteredOrders);
 
                     final reassignmentsByAdmin = _countOrdersByField(
                       filteredOrders
@@ -356,37 +368,50 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                       (o) => o.assignedAdminName,
                     );
 
-                    final salesSeries = _dailySalesSeries(filteredOrders);
-                    final orderSeries = _dailyOrderSeries(filteredOrders);
+                    final salesSeries =
+                        _dailySalesSeries(filteredOrders);
+                    final orderSeries =
+                        _dailyOrderSeries(filteredOrders);
 
-                    final sortedAdminSales = salesByAdmin.entries.toList()
-                      ..sort((a, b) => b.value.compareTo(a.value));
-                    final sortedStateSales = salesByState.entries.toList()
-                      ..sort((a, b) => b.value.compareTo(a.value));
-                    final sortedAreaSales = salesByArea.entries.toList()
-                      ..sort((a, b) => b.value.compareTo(a.value));
+                    final sortedAdminSales =
+                        salesByAdmin.entries.toList()
+                          ..sort((a, b) => b.value.compareTo(a.value));
+                    final sortedStateSales =
+                        salesByState.entries.toList()
+                          ..sort((a, b) => b.value.compareTo(a.value));
+                    final sortedAreaSales =
+                        salesByArea.entries.toList()
+                          ..sort((a, b) => b.value.compareTo(a.value));
 
-                    final topAdmin =
-                        sortedAdminSales.isEmpty ? null : sortedAdminSales.first;
-                    final worstAdmin =
-                        sortedAdminSales.isEmpty ? null : sortedAdminSales.last;
-                    final topState =
-                        sortedStateSales.isEmpty ? null : sortedStateSales.first;
-                    final worstState =
-                        sortedStateSales.isEmpty ? null : sortedStateSales.last;
-                    final topArea =
-                        sortedAreaSales.isEmpty ? null : sortedAreaSales.first;
-                    final worstArea =
-                        sortedAreaSales.isEmpty ? null : sortedAreaSales.last;
+                    final topAdmin = sortedAdminSales.isEmpty
+                        ? null
+                        : sortedAdminSales.first;
+                    final worstAdmin = sortedAdminSales.isEmpty
+                        ? null
+                        : sortedAdminSales.last;
+                    final topState = sortedStateSales.isEmpty
+                        ? null
+                        : sortedStateSales.first;
+                    final worstState = sortedStateSales.isEmpty
+                        ? null
+                        : sortedStateSales.last;
+                    final topArea = sortedAreaSales.isEmpty
+                        ? null
+                        : sortedAreaSales.first;
+                    final worstArea = sortedAreaSales.isEmpty
+                        ? null
+                        : sortedAreaSales.last;
 
                     return ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
                         AppSurfaceCard(
                           margin: const EdgeInsets.only(bottom: 18),
-                          color: colors.brandPrimary.withOpacity(0.08),
+                          color:
+                              colors.brandPrimary.withOpacity(0.08),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -401,7 +426,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                                     ),
                                   ),
                                   DropdownButtonHideUnderline(
-                                    child: DropdownButton<AnalyticsRange>(
+                                    child:
+                                        DropdownButton<AnalyticsRange>(
                                       value: _range,
                                       dropdownColor: colors.surfaceAlt,
                                       style: GoogleFonts.poppins(
@@ -432,7 +458,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                                       ],
                                       onChanged: (value) async {
                                         if (value == null) return;
-                                        if (value == AnalyticsRange.custom) {
+                                        if (value ==
+                                            AnalyticsRange.custom) {
                                           await _pickCustomRange();
                                           return;
                                         }
@@ -447,8 +474,10 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                                   padding: const EdgeInsets.only(top: 10),
                                   child: OutlinedButton.icon(
                                     onPressed: _pickCustomRange,
-                                    icon: const Icon(Icons.date_range_rounded),
-                                    label: const Text('Change Custom Range'),
+                                    icon: const Icon(
+                                        Icons.date_range_rounded),
+                                    label:
+                                        const Text('Change Custom Range'),
                                   ),
                                 ),
                               const SizedBox(height: 12),
@@ -601,13 +630,13 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                                 icon: Icons.swap_horiz_rounded,
                               ),
                             ),
-                            const SizedBox(width: 12),
                             const Expanded(child: SizedBox()),
                           ],
                         ),
 
                         const SizedBox(height: 20),
-                        const AppSectionTitle(title: 'Performance Health'),
+                        const AppSectionTitle(
+                            title: 'Performance Health'),
                         const SizedBox(height: 10),
 
                         Row(
@@ -615,7 +644,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                             Expanded(
                               child: PerformanceStatusCard(
                                 title: 'Completion Rate',
-                                value: '${orderCompletionRate.toStringAsFixed(1)}%',
+                                value:
+                                    '${orderCompletionRate.toStringAsFixed(1)}%',
                                 subtitle: 'Delivered / total orders',
                                 accentColor: colors.success,
                               ),
@@ -624,7 +654,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                             Expanded(
                               child: PerformanceStatusCard(
                                 title: 'Cancellation Rate',
-                                value: '${orderCancellationRate.toStringAsFixed(1)}%',
+                                value:
+                                    '${orderCancellationRate.toStringAsFixed(1)}%',
                                 subtitle: 'Cancelled / total orders',
                                 accentColor: colors.error,
                               ),
@@ -672,13 +703,13 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                                     : '₦${topArea.value.toStringAsFixed(0)}',
                               ),
                             ),
-                            const SizedBox(width: 12),
                             const Expanded(child: SizedBox()),
                           ],
                         ),
 
                         const SizedBox(height: 20),
-                        const AppSectionTitle(title: 'Best vs Needs Attention'),
+                        const AppSectionTitle(
+                            title: 'Best vs Needs Attention'),
                         const SizedBox(height: 10),
 
                         ComparisonDuelCard(
@@ -738,7 +769,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                         ),
 
                         const SizedBox(height: 20),
-                        const AppSectionTitle(title: 'Revenue by Fabric Type'),
+                        const AppSectionTitle(
+                            title: 'Revenue by Fabric Type'),
                         AnalyticsBarChartCard(
                           title: 'Fabric Type Sales',
                           data: salesByFabric,
@@ -747,7 +779,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                         ),
 
                         const SizedBox(height: 20),
-                        const AppSectionTitle(title: 'Orders by Fabric Type'),
+                        const AppSectionTitle(
+                            title: 'Orders by Fabric Type'),
                         AnalyticsBarChartCard(
                           title: 'Fabric Type Orders',
                           data: ordersByFabric,
@@ -792,7 +825,8 @@ class _SuperAdminAnalyticsScreenState extends State<SuperAdminAnalyticsScreen> {
                         ),
 
                         const SizedBox(height: 20),
-                        const AppSectionTitle(title: 'Reassignments by Admin'),
+                        const AppSectionTitle(
+                            title: 'Reassignments by Admin'),
                         AnalyticsBarChartCard(
                           title: 'Reassignment Count',
                           data: reassignmentsByAdmin,

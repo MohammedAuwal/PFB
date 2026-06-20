@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:pfb/config/routes/route_names.dart';
-import 'package:pfb/core/constants/app_constants.dart';
 import 'package:pfb/core/routing/app_router.dart';
+import 'package:pfb/core/theme/app_theme.dart';
 import 'package:pfb/core/theme/build_context_theme_x.dart';
 import 'package:pfb/features/cart/presentation/screens/cart_screen.dart';
 import 'package:pfb/features/orders/presentation/screens/order_screen.dart';
@@ -16,7 +16,6 @@ import 'package:pfb/features/shared/presentation/widgets/empty_state_card.dart';
 import 'package:pfb/models/product_model.dart';
 import 'package:pfb/services/admin_preview_scope.dart';
 import 'package:pfb/services/firebase_service.dart';
-import 'package:pfb/shared/widgets/app_section_title.dart';
 import 'package:pfb/shared/widgets/app_status_chip.dart';
 import 'package:pfb/shared/widgets/app_surface_card.dart';
 
@@ -24,29 +23,29 @@ import 'package:pfb/shared/widgets/app_surface_card.dart';
 
 class _TextileCategories {
   static const List<Map<String, dynamic>> items = [
-    {'label': 'All', 'emoji': '🏪'},
-    {'label': 'Ankara', 'emoji': '🌺'},
-    {'label': 'Lace', 'emoji': '🤍'},
-    {'label': 'Aso Oke', 'emoji': '👑'},
-    {'label': 'Chiffon', 'emoji': '🌸'},
-    {'label': 'Cotton', 'emoji': '☁️'},
-    {'label': 'Silk', 'emoji': '✨'},
-    {'label': 'Linen', 'emoji': '🌿'},
-    {'label': 'Native Wear', 'emoji': '🇳🇬'},
-    {'label': 'Adire', 'emoji': '🎨'},
-    {'label': 'George', 'emoji': '💎'},
-    {'label': 'Velvet', 'emoji': '🍷'},
-    {'label': 'Atiku', 'emoji': '🏅'},
-    {'label': 'Wedding', 'emoji': '💍'},
+    {'label': 'All',          'emoji': '🏪'},
+    {'label': 'Ankara',       'emoji': '🌺'},
+    {'label': 'Lace',         'emoji': '🤍'},
+    {'label': 'Aso Oke',      'emoji': '👑'},
+    {'label': 'Chiffon',      'emoji': '🌸'},
+    {'label': 'Cotton',       'emoji': '☁️'},
+    {'label': 'Silk',         'emoji': '✨'},
+    {'label': 'Linen',        'emoji': '🌿'},
+    {'label': 'Native Wear',  'emoji': '🇳🇬'},
+    {'label': 'Adire',        'emoji': '🎨'},
+    {'label': 'George',       'emoji': '💎'},
+    {'label': 'Velvet',       'emoji': '🍷'},
+    {'label': 'Atiku',        'emoji': '🏅'},
+    {'label': 'Wedding',      'emoji': '💍'},
     {'label': 'New Arrivals', 'emoji': '🆕'},
     {'label': 'Best Sellers', 'emoji': '⭐'},
-    {'label': 'Trending', 'emoji': '🔥'},
-    {'label': 'Featured', 'emoji': '💫'},
-    {'label': 'Men', 'emoji': '👔'},
-    {'label': 'Women', 'emoji': '👗'},
-    {'label': 'Children', 'emoji': '👧'},
-    {'label': 'Accessories', 'emoji': '👜'},
-    {'label': 'Luxury', 'emoji': '🥂'},
+    {'label': 'Trending',     'emoji': '🔥'},
+    {'label': 'Featured',     'emoji': '💫'},
+    {'label': 'Men',          'emoji': '👔'},
+    {'label': 'Women',        'emoji': '👗'},
+    {'label': 'Children',     'emoji': '👧'},
+    {'label': 'Accessories',  'emoji': '👜'},
+    {'label': 'Luxury',       'emoji': '🥂'},
   ];
 }
 
@@ -56,17 +55,19 @@ class _QuickActionData {
   final IconData icon;
   final String label;
   final Color bgColor;
+  final Color iconColor;
   final VoidCallback onTap;
 
   const _QuickActionData({
     required this.icon,
     required this.label,
     required this.bgColor,
+    required this.iconColor,
     required this.onTap,
   });
 }
 
-// ── Occasion Tiles ─────────────────────────────────────────────────────────────
+// ── Occasion Data ──────────────────────────────────────────────────────────────
 
 class _OccasionData {
   final String label;
@@ -95,17 +96,17 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen>
     with SingleTickerProviderStateMixin {
-  final _repo = ProductRepository();
+  final _repo           = ProductRepository();
   final _firebaseService = FirebaseService();
-  final _searchCtrl = TextEditingController();
-  final _scrollCtrl = ScrollController();
+  final _searchCtrl     = TextEditingController();
+  final _scrollCtrl     = ScrollController();
 
-  String _selectedCategory = 'All';
-  bool _showSearchFocused = false;
-  late AnimationController _promoAnimCtrl;
-  late Animation<double> _promoAnim;
+  String _selectedCategory  = 'All';
+  bool   _showSearchFocused = false;
+  late   AnimationController _promoAnimCtrl;
+  late   Animation<double>   _promoAnim;
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   bool _matchesSearch(ProductModel p, String query) {
     if (query.isEmpty) return true;
@@ -145,87 +146,107 @@ class _ProductListScreenState extends State<ProductListScreen>
   }
 
   void _openGuestNotificationsPanel() {
-    final colors = context.appColors;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: colors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) {
-        final c = ctx.appColors;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: c.border,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
+        final c    = ctx.appColors;
+        final dark = ctx.isDarkMode;
+
+        return Container(
+          decoration: BoxDecoration(
+            color:        c.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
+            ),
+            border: Border(
+              top: BorderSide(
+                color: AppPalette.primary.withOpacity(dark ? 0.30 : 0.15),
+                width: 1,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width:  42,
+                      height: 4,
                       decoration: BoxDecoration(
-                        color: c.brandPrimary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        Icons.notifications_active_rounded,
-                        color: c.brandPrimary,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'IsmailTex Notifications',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        color: c.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Sign in to receive updates on your fabric orders, tailoring progress, new arrivals, exclusive deals, and delivery tracking.',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: c.textSecondary,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      Navigator.of(ctx).pop();
-                      await _goToLogin();
-                    },
-                    icon: const Icon(Icons.login_rounded),
-                    label: Text(
-                      'Sign In to IsmailTex',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                        color:        AppPalette.primary.withOpacity(0.35),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppPalette.primaryDark,
+                              AppPalette.primary,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_active_rounded,
+                          color: AppPalette.secondary,
+                          size:  22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Phlakes Notifications',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize:   18,
+                          color:      c.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Sign in to receive updates on your fabric orders, '
+                    'new arrivals, exclusive deals & delivery tracking.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color:    c.textSecondary,
+                      height:   1.6,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width:  double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        await _goToLogin();
+                      },
+                      icon:  const Icon(Icons.login_rounded),
+                      label: Text(
+                        'Sign In to Phlakes Fabrics',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize:   15,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -242,12 +263,12 @@ class _ProductListScreenState extends State<ProductListScreen>
     _firebaseService.seedDefaultAppSettings();
 
     _promoAnimCtrl = AnimationController(
-      vsync: this,
+      vsync:    this,
       duration: const Duration(milliseconds: 600),
     );
     _promoAnim = CurvedAnimation(
       parent: _promoAnimCtrl,
-      curve: Curves.easeOut,
+      curve:  Curves.easeOut,
     );
     _promoAnimCtrl.forward();
   }
@@ -265,14 +286,14 @@ class _ProductListScreenState extends State<ProductListScreen>
   @override
   Widget build(BuildContext context) {
     final previewController = AdminPreviewScope.of(context);
-    final colors = context.appColors;
+    final colors            = context.appColors;
 
     final body = SafeArea(
       child: StreamBuilder<Map<String, dynamic>?>(
         stream: _firebaseService.watchUserProfile(),
         builder: (context, profileSnapshot) {
-          final profile = profileSnapshot.data ?? {};
-          final authUser = FirebaseAuth.instance.currentUser;
+          final profile        = profileSnapshot.data ?? {};
+          final authUser       = FirebaseAuth.instance.currentUser;
 
           final profileDisplayName =
               (profile['displayName'] ?? '').toString().trim();
@@ -290,12 +311,11 @@ class _ProductListScreenState extends State<ProductListScreen>
 
           final profilePhotoUrl =
               (profile['photoUrl'] ?? '').toString().trim();
-          final authPhotoUrl =
-              (authUser?.photoURL ?? '').trim();
-          final headerPhotoUrl = profilePhotoUrl.isNotEmpty
+          final authPhotoUrl    = (authUser?.photoURL ?? '').trim();
+          final headerPhotoUrl  = profilePhotoUrl.isNotEmpty
               ? profilePhotoUrl
               : authPhotoUrl;
-          final hasHeaderPhoto = _hasValidImage(headerPhotoUrl);
+          final hasHeaderPhoto  = _hasValidImage(headerPhotoUrl);
 
           return StreamBuilder<List<String>>(
             stream: _firebaseService.watchCategories(),
@@ -303,7 +323,6 @@ class _ProductListScreenState extends State<ProductListScreen>
               final dynamicCategories =
                   categorySnapshot.data ?? const <String>[];
 
-              // Merge dynamic DB categories with static textile categories
               final staticLabels = _TextileCategories.items
                   .map((e) => e['label'] as String)
                   .toSet();
@@ -330,8 +349,8 @@ class _ProductListScreenState extends State<ProductListScreen>
                     return _buildSkeletonLoader();
                   }
 
-                  final items = productSnapshot.data ?? [];
-                  final query =
+                  final items    = productSnapshot.data ?? [];
+                  final query    =
                       _searchCtrl.text.trim().toLowerCase();
 
                   final filtered = items.where((p) {
@@ -356,38 +375,30 @@ class _ProductListScreenState extends State<ProductListScreen>
                       return CustomScrollView(
                         controller: _scrollCtrl,
                         slivers: [
-                          // ────────────────────────────────────────
-                          // 1. APP BAR HEADER
-                          // ────────────────────────────────────────
+                          // ── 1. HEADER ──────────────────────────
                           SliverToBoxAdapter(
                             child: _buildHeader(
                               context,
-                              colors: colors,
-                              displayName: displayName,
+                              colors:         colors,
+                              displayName:    displayName,
                               hasHeaderPhoto: hasHeaderPhoto,
                               headerPhotoUrl: headerPhotoUrl,
                             ),
                           ),
 
-                          // ────────────────────────────────────────
-                          // 2. GUEST BANNER
-                          // ────────────────────────────────────────
+                          // ── 2. GUEST BANNER ────────────────────
                           if (_isGuest)
                             SliverToBoxAdapter(
                               child: _buildGuestBanner(colors),
                             ),
 
-                          // ────────────────────────────────────────
-                          // 3. ADMIN PREVIEW BANNER
-                          // ────────────────────────────────────────
+                          // ── 3. ADMIN PREVIEW BANNER ────────────
                           if (previewController.isPreviewMode)
                             SliverToBoxAdapter(
                               child: _buildPreviewBanner(colors),
                             ),
 
-                          // ────────────────────────────────────────
-                          // 4. SEARCH BAR
-                          // ────────────────────────────────────────
+                          // ── 4. SEARCH BAR ──────────────────────
                           SliverToBoxAdapter(
                             child: _buildSearchBar(colors),
                           ),
@@ -395,9 +406,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 14)),
 
-                          // ────────────────────────────────────────
-                          // 5. DELIVER TO CARD
-                          // ────────────────────────────────────────
+                          // ── 5. DELIVER TO ──────────────────────
                           SliverToBoxAdapter(
                             child: _buildDeliverToCard(colors),
                           ),
@@ -405,10 +414,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 14)),
 
-                          // ────────────────────────────────────────
-                          // 6. MAIN ACTION CARDS
-                          //    Browse Fabrics | Tailoring Services
-                          // ────────────────────────────────────────
+                          // ── 6. MAIN ACTION CARDS ───────────────
                           SliverToBoxAdapter(
                             child: _buildMainActionCards(colors),
                           ),
@@ -416,10 +422,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 14)),
 
-                          // ────────────────────────────────────────
-                          // 7. QUICK ACTIONS
-                          //    Cart | Orders | Wishlist | Track
-                          // ────────────────────────────────────────
+                          // ── 7. QUICK ACTIONS ───────────────────
                           SliverToBoxAdapter(
                             child: _buildQuickActions(colors),
                           ),
@@ -427,9 +430,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 16)),
 
-                          // ────────────────────────────────────────
-                          // 8. PROMO BANNER
-                          // ────────────────────────────────────────
+                          // ── 8. PROMO BANNER ────────────────────
                           SliverToBoxAdapter(
                             child: _buildPromoBanner(colors),
                           ),
@@ -437,9 +438,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 16)),
 
-                          // ────────────────────────────────────────
-                          // 9. SHOP BY OCCASION
-                          // ────────────────────────────────────────
+                          // ── 9. SHOP BY OCCASION ────────────────
                           SliverToBoxAdapter(
                             child: _buildSectionHeader(
                               colors,
@@ -453,9 +452,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 16)),
 
-                          // ────────────────────────────────────────
-                          // 10. FABRIC CATEGORY CHIPS
-                          // ────────────────────────────────────────
+                          // ── 10. FABRIC CATEGORY CHIPS ──────────
                           SliverToBoxAdapter(
                             child: _buildSectionHeader(
                               colors,
@@ -473,9 +470,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 16)),
 
-                          // ────────────────────────────────────────
-                          // 11. TRENDING NOW
-                          // ────────────────────────────────────────
+                          // ── 11. TRENDING NOW ───────────────────
                           SliverToBoxAdapter(
                             child: _buildSectionHeader(
                               colors,
@@ -484,16 +479,15 @@ class _ProductListScreenState extends State<ProductListScreen>
                           ),
                           if (trendingItems.isEmpty)
                             _buildEmptySliver(
-                              icon: Icons.local_fire_department_outlined,
-                              title: 'No trending fabrics yet',
-                              subtitle:
-                                  'Mark products as trending from admin panel.',
+                              icon:     Icons.local_fire_department_outlined,
+                              title:    'No trending fabrics yet',
+                              subtitle: 'Mark products as trending from admin panel.',
                             )
                           else
                             SliverToBoxAdapter(
                               child: _buildHorizontalProductList(
                                 context,
-                                items: trendingItems,
+                                items:     trendingItems,
                                 favorites: favorites,
                               ),
                             ),
@@ -501,25 +495,22 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 16)),
 
-                          // ────────────────────────────────────────
-                          // 12. NEW ARRIVALS
-                          // ────────────────────────────────────────
+                          // ── 12. NEW ARRIVALS ───────────────────
                           if (newArrivals.isNotEmpty) ...[
                             SliverToBoxAdapter(
                               child: _buildSectionHeader(
                                 colors,
-                                title: 'New Arrivals 🆕',
+                                title:       'New Arrivals 🆕',
                                 actionLabel: 'See All',
                                 onAction: () => setState(
-                                  () => _selectedCategory =
-                                      'New Arrivals',
+                                  () => _selectedCategory = 'New Arrivals',
                                 ),
                               ),
                             ),
                             SliverToBoxAdapter(
                               child: _buildHorizontalProductList(
                                 context,
-                                items: newArrivals,
+                                items:     newArrivals,
                                 favorites: favorites,
                               ),
                             ),
@@ -527,25 +518,22 @@ class _ProductListScreenState extends State<ProductListScreen>
                                 child: SizedBox(height: 16)),
                           ],
 
-                          // ────────────────────────────────────────
-                          // 13. BEST SELLERS
-                          // ────────────────────────────────────────
+                          // ── 13. BEST SELLERS ───────────────────
                           if (bestSellers.isNotEmpty) ...[
                             SliverToBoxAdapter(
                               child: _buildSectionHeader(
                                 colors,
-                                title: 'Best Sellers ⭐',
+                                title:       'Best Sellers ⭐',
                                 actionLabel: 'See All',
                                 onAction: () => setState(
-                                  () => _selectedCategory =
-                                      'Best Sellers',
+                                  () => _selectedCategory = 'Best Sellers',
                                 ),
                               ),
                             ),
                             SliverToBoxAdapter(
                               child: _buildHorizontalProductList(
                                 context,
-                                items: bestSellers,
+                                items:     bestSellers,
                                 favorites: favorites,
                               ),
                             ),
@@ -553,9 +541,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                                 child: SizedBox(height: 16)),
                           ],
 
-                          // ────────────────────────────────────────
-                          // 14. FEATURED COLLECTION
-                          // ────────────────────────────────────────
+                          // ── 14. FEATURED COLLECTION ────────────
                           if (featuredItems.isNotEmpty) ...[
                             SliverToBoxAdapter(
                               child: _buildSectionHeader(
@@ -566,9 +552,9 @@ class _ProductListScreenState extends State<ProductListScreen>
                             SliverToBoxAdapter(
                               child: _buildHorizontalProductList(
                                 context,
-                                items: featuredItems,
-                                favorites: favorites,
-                                cardWidth: 200,
+                                items:      featuredItems,
+                                favorites:  favorites,
+                                cardWidth:  200,
                                 cardHeight: 240,
                               ),
                             ),
@@ -576,9 +562,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                                 child: SizedBox(height: 16)),
                           ],
 
-                          // ────────────────────────────────────────
-                          // 15. SHOP BY GENDER
-                          // ────────────────────────────────────────
+                          // ── 15. SHOP BY GENDER ─────────────────
                           SliverToBoxAdapter(
                             child: _buildSectionHeader(
                               colors,
@@ -592,9 +576,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                           const SliverToBoxAdapter(
                               child: SizedBox(height: 16)),
 
-                          // ────────────────────────────────────────
-                          // 16. ALL PRODUCTS GRID (filtered)
-                          // ────────────────────────────────────────
+                          // ── 16. ALL PRODUCTS GRID ──────────────
                           SliverToBoxAdapter(
                             child: _buildSectionHeader(
                               colors,
@@ -609,28 +591,25 @@ class _ProductListScreenState extends State<ProductListScreen>
 
                           if (filtered.isEmpty)
                             _buildEmptySliver(
-                              icon: Icons.inventory_2_outlined,
-                              title: 'No products found',
-                              subtitle:
-                                  'Try a different category or search term.',
+                              icon:     Icons.inventory_2_outlined,
+                              title:    'No products found',
+                              subtitle: 'Try a different category or search term.',
                             )
                           else
                             SliverPadding(
                               padding: const EdgeInsets.fromLTRB(
                                   16, 0, 16, 8),
                               sliver: SliverGrid(
-                                delegate:
-                                    SliverChildBuilderDelegate(
+                                delegate: SliverChildBuilderDelegate(
                                   (_, i) {
-                                    final product = filtered[i];
-                                    final isFav = favorites
-                                        .contains(product.id);
+                                    final product  = filtered[i];
+                                    final isFav    =
+                                        favorites.contains(product.id);
                                     return _ProductGridCard(
-                                      product: product,
+                                      product:    product,
                                       isFavorite: isFav,
                                       onTap: () =>
-                                          _openProduct(
-                                              context, product),
+                                          _openProduct(context, product),
                                       onFavorite: () =>
                                           _toggleFav(product.id),
                                     );
@@ -639,17 +618,15 @@ class _ProductListScreenState extends State<ProductListScreen>
                                 ),
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
+                                  crossAxisCount:  2,
                                   childAspectRatio: 0.68,
                                   crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
+                                  mainAxisSpacing:  12,
                                 ),
                               ),
                             ),
 
-                          // ────────────────────────────────────────
-                          // 17. BOTTOM PROMO STRIP
-                          // ────────────────────────────────────────
+                          // ── 17. BOTTOM PROMO STRIP ─────────────
                           SliverToBoxAdapter(
                             child: _buildBottomPromoStrip(colors),
                           ),
@@ -671,17 +648,16 @@ class _ProductListScreenState extends State<ProductListScreen>
     if (!widget.showBottomNav) {
       return Scaffold(
         backgroundColor: context.appColors.scaffold,
-        body: body,
+        body:            body,
       );
     }
 
-    // Standalone bottom nav (when used outside shell)
     return StreamBuilder<int>(
       stream: _firebaseService.watchUnreadNotificationCount(),
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: context.appColors.scaffold,
-          body: body,
+          backgroundColor:   context.appColors.scaffold,
+          body:              body,
           bottomNavigationBar: _buildStandaloneBottomNav(context),
         );
       },
@@ -699,35 +675,31 @@ class _ProductListScreenState extends State<ProductListScreen>
   }
 
   Future<void> _toggleFav(String productId) async {
-    if (_isGuest) {
-      await _goToLogin();
-      return;
-    }
+    if (_isGuest) { await _goToLogin(); return; }
     await _firebaseService.toggleFavorite(productId);
   }
 
-  // ── Section Widgets ───────────────────────────────────────────────────────
+  // ── Skeleton Loader ───────────────────────────────────────────────────────
 
   Widget _buildSkeletonLoader() {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: 6,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount:   2,
         childAspectRatio: 0.68,
         crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        mainAxisSpacing:  12,
       ),
       itemBuilder: (_, __) => AppSurfaceCard(
-        padding: const EdgeInsets.all(10),
+        padding:      const EdgeInsets.all(10),
         borderRadius: BorderRadius.circular(20),
         child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: AppShimmerLoader(
-                borderRadius:
-                    BorderRadius.all(Radius.circular(14)),
+                borderRadius: BorderRadius.all(Radius.circular(14)),
               ),
             ),
             SizedBox(height: 10),
@@ -746,50 +718,70 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   Widget _buildHeader(
     BuildContext context, {
-    required dynamic colors,
+    required AppThemeColors colors,
     required String displayName,
     required bool hasHeaderPhoto,
     required String headerPhotoUrl,
   }) {
+    final isDark = context.isDarkMode;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       child: Row(
         children: [
-          // Avatar
+          // ── Avatar ────────────────────────────────────────────
           GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => const ProfileScreen()),
-              );
-            },
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const ProfileScreen()),
+            ),
             child: Container(
-              width: 48,
+              width:  48,
               height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: colors.brandPrimary.withOpacity(0.45),
-                  width: 2.5,
-                ),
+                gradient: hasHeaderPhoto
+                    ? null
+                    : const LinearGradient(
+                        colors: [
+                          AppPalette.primaryDark,
+                          AppPalette.primary,
+                        ],
+                        begin: Alignment.topLeft,
+                        end:   Alignment.bottomRight,
+                      ),
                 image: hasHeaderPhoto
                     ? DecorationImage(
                         image: NetworkImage(headerPhotoUrl),
-                        fit: BoxFit.cover,
+                        fit:   BoxFit.cover,
                       )
                     : null,
-                color: colors.cream,
+                border: Border.all(
+                  color: AppPalette.primary.withOpacity(
+                    isDark ? 0.60 : 0.40,
+                  ),
+                  width: 2.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color:      AppPalette.primary.withOpacity(
+                      isDark ? 0.30 : 0.15,
+                    ),
+                    blurRadius: 10,
+                    offset:     const Offset(0, 3),
+                  ),
+                ],
               ),
               child: !hasHeaderPhoto
                   ? Center(
                       child: Text(
                         displayName.isNotEmpty
                             ? displayName[0].toUpperCase()
-                            : 'I',
+                            : 'P',
                         style: GoogleFonts.poppins(
-                          color: colors.brown,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
+                          color:      AppPalette.secondary,
+                          fontWeight: FontWeight.w800,
+                          fontSize:   18,
                         ),
                       ),
                     )
@@ -798,54 +790,56 @@ class _ProductListScreenState extends State<ProductListScreen>
           ),
           const SizedBox(width: 12),
 
-          // Brand + Greeting
+          // ── Brand + Greeting ──────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
+                    // Gold brand badge
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
-                        vertical: 5,
+                        vertical:   5,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           colors: [
-                            colors.brandPrimary,
-                            colors.brandPrimary.withOpacity(0.75),
+                            AppPalette.primaryDark,
+                            AppPalette.primary,
+                            AppPalette.primaryLight,
                           ],
                           begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                          end:   Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                colors.brandPrimary.withOpacity(0.30),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                            color:      AppPalette.primary
+                                .withOpacity(isDark ? 0.45 : 0.30),
+                            blurRadius: 10,
+                            offset:     const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: Text(
-                        'ITEX',
+                        'PF',
                         style: GoogleFonts.cinzel(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
+                          color:         AppPalette.secondary,
+                          fontSize:      12,
+                          fontWeight:    FontWeight.w900,
                           letterSpacing: 2.0,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'IsmailTex',
+                      'Phlakes Fabrics',
                       style: GoogleFonts.playfairDisplay(
                         fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                        color: colors.textPrimary,
+                        fontSize:   17,
+                        color:      colors.textPrimary,
                       ),
                     ),
                   ],
@@ -853,11 +847,11 @@ class _ProductListScreenState extends State<ProductListScreen>
                 const SizedBox(height: 3),
                 Text(
                   _isGuest
-                      ? '👋 Welcome! Discover premium fabrics'
+                      ? '👋 Welcome! Discover luxury fabrics'
                       : '👋 Welcome back, $displayName',
                   style: GoogleFonts.poppins(
-                    color: colors.textSecondary,
-                    fontSize: 12,
+                    color:      colors.textSecondary,
+                    fontSize:   12,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -869,51 +863,65 @@ class _ProductListScreenState extends State<ProductListScreen>
 
           const SizedBox(width: 8),
 
-          // Notification Bell
+          // ── Notification Bell ─────────────────────────────────
           StreamBuilder<int>(
             stream: _firebaseService.watchUnreadNotificationCount(),
             builder: (context, snapshot) {
               final unreadCount = snapshot.data ?? 0;
+
               return GestureDetector(
                 onTap: _openNotifications,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      width: 44,
+                      width:  44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: colors.surface,
-                        shape: BoxShape.circle,
+                        color:  colors.surface,
+                        shape:  BoxShape.circle,
+                        border: Border.all(
+                          color: AppPalette.primary.withOpacity(
+                            isDark ? 0.30 : 0.15,
+                          ),
+                          width: 1,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: colors.shadow,
+                            color:      colors.shadow,
                             blurRadius: 12,
-                            offset: const Offset(0, 4),
+                            offset:     const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: Icon(
                         Icons.notifications_none_rounded,
-                        color: colors.iconOnLightTint,
-                        size: 22,
+                        color: colors.iconPrimary,
+                        size:  22,
                       ),
                     ),
                     if (unreadCount > 0)
                       Positioned(
                         right: -4,
-                        top: -4,
+                        top:   -4,
                         child: Container(
                           constraints: const BoxConstraints(
-                            minWidth: 18,
+                            minWidth:  18,
                             minHeight: 18,
                           ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 2),
+                            horizontal: 5,
+                            vertical:   2,
+                          ),
                           decoration: BoxDecoration(
-                            color: colors.error,
-                            borderRadius:
-                                BorderRadius.circular(999),
+                            // Gold badge
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppPalette.primaryDark,
+                                AppPalette.primary,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                               color: colors.surface,
                               width: 1.5,
@@ -925,9 +933,9 @@ class _ProductListScreenState extends State<ProductListScreen>
                                   ? '99+'
                                   : '$unreadCount',
                               style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
+                                color:      AppPalette.secondary,
+                                fontSize:   9,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
@@ -945,56 +953,82 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── GUEST BANNER ──────────────────────────────────────────────────────────
 
-  Widget _buildGuestBanner(dynamic colors) {
+  Widget _buildGuestBanner(AppThemeColors colors) {
+    final isDark = context.isDarkMode;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: AppSurfaceCard(
-        color: colors.brandPrimary.withOpacity(0.08),
-        padding: const EdgeInsets.all(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppPalette.primary.withOpacity(isDark ? 0.15 : 0.10),
+              AppPalette.primaryLight.withOpacity(isDark ? 0.08 : 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppPalette.primary.withOpacity(isDark ? 0.30 : 0.20),
+          ),
+        ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: colors.brandPrimary.withOpacity(0.15),
+                gradient: const LinearGradient(
+                  colors: [AppPalette.primaryDark, AppPalette.primary],
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.person_outline_rounded,
-                color: colors.brown,
-                size: 18,
+                color: AppPalette.secondary,
+                size:  18,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Sign in to save wishlists, track orders & enjoy personalized recommendations.',
+                'Sign in to save wishlists, track orders & get '
+                'personalised recommendations.',
                 style: GoogleFonts.poppins(
-                  color: colors.brown,
+                  color:      AppPalette.primary,
                   fontWeight: FontWeight.w600,
-                  fontSize: 11.5,
-                  height: 1.4,
+                  fontSize:   11.5,
+                  height:     1.4,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            TextButton(
-              onPressed: _goToLogin,
-              style: TextButton.styleFrom(
+            GestureDetector(
+              onTap: _goToLogin,
+              child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                backgroundColor:
-                    colors.brandPrimary.withOpacity(0.15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  horizontal: 14,
+                  vertical:   8,
                 ),
-              ),
-              child: Text(
-                'Sign In',
-                style: GoogleFonts.poppins(
-                  color: colors.brown,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppPalette.primaryDark, AppPalette.primary],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color:      AppPalette.primary.withOpacity(0.30),
+                      blurRadius: 8,
+                      offset:     const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'Sign In',
+                  style: GoogleFonts.poppins(
+                    color:      AppPalette.secondary,
+                    fontWeight: FontWeight.w800,
+                    fontSize:   12,
+                  ),
                 ),
               ),
             ),
@@ -1006,24 +1040,33 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── PREVIEW BANNER ────────────────────────────────────────────────────────
 
-  Widget _buildPreviewBanner(dynamic colors) {
+  Widget _buildPreviewBanner(AppThemeColors colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: AppSurfaceCard(
-        color: colors.brandPrimary.withOpacity(0.12),
-        padding: const EdgeInsets.symmetric(
-            horizontal: 14, vertical: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppPalette.primaryDark, AppPalette.primary],
+            begin:  Alignment.centerLeft,
+            end:    Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Row(
           children: [
-            Icon(Icons.visibility_rounded,
-                color: colors.brown, size: 18),
+            const Icon(
+              Icons.visibility_rounded,
+              color: AppPalette.secondary,
+              size:  18,
+            ),
             const SizedBox(width: 8),
             Text(
-              'Admin Preview Mode — IsmailTex',
+              'Admin Preview Mode — Phlakes Fabrics',
               style: GoogleFonts.poppins(
-                color: colors.brown,
+                color:      AppPalette.secondary,
                 fontWeight: FontWeight.w700,
-                fontSize: 12,
+                fontSize:   12,
               ),
             ),
           ],
@@ -1034,47 +1077,47 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── SEARCH BAR ────────────────────────────────────────────────────────────
 
-  Widget _buildSearchBar(dynamic colors) {
+  Widget _buildSearchBar(AppThemeColors colors) {
+    final isDark = context.isDarkMode;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(18),
+          color:        colors.surface,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _showSearchFocused
-                ? colors.brandPrimary
+                ? AppPalette.primary
                 : colors.borderSoft,
-            width: _showSearchFocused ? 1.5 : 1,
+            width: _showSearchFocused ? 1.8 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: _showSearchFocused
-                  ? colors.brandPrimary.withOpacity(0.12)
+                  ? AppPalette.primary.withOpacity(isDark ? 0.20 : 0.12)
                   : colors.shadow,
               blurRadius: _showSearchFocused ? 16 : 8,
-              offset: const Offset(0, 4),
+              offset:     const Offset(0, 4),
             ),
           ],
         ),
         child: TextField(
-          controller: _searchCtrl,
-          onChanged: (_) => setState(() {}),
-          onTap: () => setState(() => _showSearchFocused = true),
-          onSubmitted: (_) =>
-              setState(() => _showSearchFocused = false),
+          controller:  _searchCtrl,
+          onChanged:   (_) => setState(() {}),
+          onTap:       () => setState(() => _showSearchFocused = true),
+          onSubmitted: (_) => setState(() => _showSearchFocused = false),
           decoration: InputDecoration(
-            hintText:
-                'Search fabrics, lace, Ankara, native wear...',
+            hintText: 'Search Ankara, Lace, Aso Oke, Silk...',
             hintStyle: GoogleFonts.poppins(
               fontSize: 13,
-              color: colors.textSecondary,
+              color:    colors.textSecondary,
             ),
             prefixIcon: Icon(
               Icons.search_rounded,
               color: _showSearchFocused
-                  ? colors.brandPrimary
+                  ? AppPalette.primary
                   : colors.iconPrimary,
             ),
             suffixIcon: _searchCtrl.text.isNotEmpty
@@ -1082,7 +1125,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                     icon: Icon(
                       Icons.close_rounded,
                       color: colors.iconPrimary,
-                      size: 20,
+                      size:  20,
                     ),
                     onPressed: () {
                       _searchCtrl.clear();
@@ -1090,9 +1133,9 @@ class _ProductListScreenState extends State<ProductListScreen>
                     },
                   )
                 : null,
-            border: InputBorder.none,
+            border:         InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
-              vertical: 14,
+              vertical:   14,
               horizontal: 4,
             ),
           ),
@@ -1103,7 +1146,7 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── DELIVER TO ────────────────────────────────────────────────────────────
 
-  Widget _buildDeliverToCard(dynamic colors) {
+  Widget _buildDeliverToCard(AppThemeColors colors) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: StreamBuilder<String>(
@@ -1113,19 +1156,23 @@ class _ProductListScreenState extends State<ProductListScreen>
 
           return AppSurfaceCard(
             padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 12),
+              horizontal: 14,
+              vertical:   12,
+            ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colors.brandPrimary.withOpacity(0.10),
+                    gradient: const LinearGradient(
+                      colors: [AppPalette.primaryDark, AppPalette.primary],
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.location_on_rounded,
-                    color: colors.brandPrimary,
-                    size: 18,
+                    color: AppPalette.secondary,
+                    size:  18,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1136,8 +1183,8 @@ class _ProductListScreenState extends State<ProductListScreen>
                       Text(
                         'Deliver To',
                         style: GoogleFonts.poppins(
-                          color: colors.textSecondary,
-                          fontSize: 11,
+                          color:      colors.textSecondary,
+                          fontSize:   11,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1149,11 +1196,10 @@ class _ProductListScreenState extends State<ProductListScreen>
                                 ? 'No address selected'
                                 : selectedAddress),
                         style: GoogleFonts.poppins(
-                          color: (_isGuest ||
-                                  selectedAddress.isEmpty)
+                          color: (_isGuest || selectedAddress.isEmpty)
                               ? colors.textSecondary
                               : colors.textPrimary,
-                          fontSize: 12,
+                          fontSize:   12,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
@@ -1162,28 +1208,39 @@ class _ProductListScreenState extends State<ProductListScreen>
                     ],
                   ),
                 ),
-                TextButton(
-                  onPressed: _isGuest ? _goToLogin : () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const ProfileScreen()),
-                    );
-                  },
-                  style: TextButton.styleFrom(
+                GestureDetector(
+                  onTap: _isGuest
+                      ? _goToLogin
+                      : () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ProfileScreen(),
+                            ),
+                          ),
+                  child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
-                    backgroundColor:
-                        colors.brandPrimary.withOpacity(0.10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      horizontal: 12,
+                      vertical:   7,
                     ),
-                  ),
-                  child: Text(
-                    'Change',
-                    style: GoogleFonts.poppins(
-                      color: colors.brandPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppPalette.primaryDark, AppPalette.primary],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color:      AppPalette.primary.withOpacity(0.25),
+                          blurRadius: 8,
+                          offset:     const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Change',
+                      style: GoogleFonts.poppins(
+                        color:      AppPalette.secondary,
+                        fontWeight: FontWeight.w700,
+                        fontSize:   12,
+                      ),
                     ),
                   ),
                 ),
@@ -1197,47 +1254,48 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── MAIN ACTION CARDS ─────────────────────────────────────────────────────
 
-  Widget _buildMainActionCards(dynamic colors) {
+  Widget _buildMainActionCards(AppThemeColors colors) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // Browse Fabrics
+          // Browse Fabrics — gold gradient
           Expanded(
             child: _MainActionCard(
-              title: 'Browse\nFabrics',
+              title:    'Browse\nFabrics',
               subtitle: 'Ankara, Lace & more',
-              icon: Icons.style_rounded,
-              gradientColors: [
-                colors.brandPrimary,
-                colors.brandPrimary.withOpacity(0.70),
+              icon:     Icons.style_rounded,
+              gradientColors: const [
+                AppPalette.primaryDark,
+                AppPalette.primary,
+                AppPalette.primaryLight,
               ],
-              iconBg: Colors.white.withOpacity(0.20),
+              textColor: AppPalette.secondary,
               onTap: () => setState(() => _selectedCategory = 'All'),
             ),
           ),
           const SizedBox(width: 12),
-          // Tailoring Services
+          // Fabric Consultation — black gradient
           Expanded(
             child: _MainActionCard(
-              title: 'Tailoring\nServices',
-              subtitle: 'Custom fitted styles',
-              icon: Icons.content_cut_rounded,
-              gradientColors: [
-                colors.brown,
-                colors.darkBrown,
+              title:    'Fabric\nConsultation',
+              subtitle: 'Expert styling advice',
+              icon:     Icons.content_cut_rounded,
+              gradientColors: const [
+                Color(0xFF111111),
+                Color(0xFF2A2A2A),
               ],
-              iconBg: Colors.white.withOpacity(0.20),
+              textColor: Colors.white,
               onTap: () {
-                // TODO: Navigate to TailoringScreen
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      '✂️ Tailoring Services — Coming Soon!',
+                      '✂️ Fabric Consultation — Coming Soon!',
                       style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    backgroundColor: colors.brown,
+                    backgroundColor: const Color(0xFF1A1A1A),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1254,61 +1312,64 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── QUICK ACTIONS ─────────────────────────────────────────────────────────
 
-  Widget _buildQuickActions(dynamic colors) {
+  Widget _buildQuickActions(AppThemeColors colors) {
+    final isDark = context.isDarkMode;
+
+    // Gold-tinted quick action backgrounds
     final actions = [
       _QuickActionData(
-        icon: Icons.shopping_bag_rounded,
-        label: 'Cart',
-        bgColor: colors.paleOrange,
+        icon:      Icons.shopping_bag_rounded,
+        label:     'Cart',
+        bgColor:   isDark
+            ? AppPalette.darkPaleGold
+            : AppPalette.paleGold,
+        iconColor: AppPalette.primary,
         onTap: () {
-          if (_isGuest) {
-            _goToLogin();
-            return;
-          }
+          if (_isGuest) { _goToLogin(); return; }
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const CartScreen()),
           );
         },
       ),
       _QuickActionData(
-        icon: Icons.receipt_long_rounded,
-        label: 'Orders',
-        bgColor: colors.paleBlue,
+        icon:      Icons.receipt_long_rounded,
+        label:     'Orders',
+        bgColor:   isDark
+            ? AppPalette.darkPaleBlue
+            : AppPalette.paleBlue,
+        iconColor: AppPalette.info,
         onTap: () {
-          if (_isGuest) {
-            _goToLogin();
-            return;
-          }
+          if (_isGuest) { _goToLogin(); return; }
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => OrderScreen()),
           );
         },
       ),
       _QuickActionData(
-        icon: Icons.favorite_rounded,
-        label: 'Wishlist',
-        bgColor: colors.paleRed,
+        icon:      Icons.favorite_rounded,
+        label:     'Wishlist',
+        bgColor:   isDark
+            ? AppPalette.darkPaleRed
+            : AppPalette.paleRed,
+        iconColor: AppPalette.error,
         onTap: () {
-          if (_isGuest) {
-            _goToLogin();
-            return;
-          }
+          if (_isGuest) { _goToLogin(); return; }
           Navigator.of(context).push(
             MaterialPageRoute(
-                builder: (_) =>
-                    const ProfileScreen(showScaffold: true)),
+              builder: (_) => const ProfileScreen(showScaffold: true),
+            ),
           );
         },
       ),
       _QuickActionData(
-        icon: Icons.local_shipping_rounded,
-        label: 'Track',
-        bgColor: colors.paleGreen,
+        icon:      Icons.local_shipping_rounded,
+        label:     'Track',
+        bgColor:   isDark
+            ? AppPalette.darkPaleGreen
+            : AppPalette.paleGreen,
+        iconColor: AppPalette.success,
         onTap: () {
-          if (_isGuest) {
-            _goToLogin();
-            return;
-          }
+          if (_isGuest) { _goToLogin(); return; }
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => OrderScreen()),
           );
@@ -1323,10 +1384,11 @@ class _ProductListScreenState extends State<ProductListScreen>
             .map(
               (a) => Expanded(
                 child: _QuickActionItem(
-                  icon: a.icon,
-                  label: a.label,
-                  bgColor: a.bgColor,
-                  onTap: a.onTap,
+                  icon:      a.icon,
+                  label:     a.label,
+                  bgColor:   a.bgColor,
+                  iconColor: a.iconColor,
+                  onTap:     a.onTap,
                 ),
               ),
             )
@@ -1337,29 +1399,32 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── PROMO BANNER ──────────────────────────────────────────────────────────
 
-  Widget _buildPromoBanner(dynamic colors) {
+  Widget _buildPromoBanner(AppThemeColors colors) {
     return FadeTransition(
       opacity: _promoAnim,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
+          width:   double.infinity,
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            // Luxury dark + gold shimmer — brand-perfect
+            gradient: const LinearGradient(
               colors: [
-                colors.brandPrimary,
-                colors.brown,
+                Color(0xFF0B0B0B),
+                Color(0xFF1A1500),
+                AppPalette.primaryDark,
               ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              stops: [0.0, 0.55, 1.0],
+              begin: Alignment.centerLeft,
+              end:   Alignment.centerRight,
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: colors.brandPrimary.withOpacity(0.30),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color:      AppPalette.primary.withOpacity(0.35),
+                blurRadius: 20,
+                offset:     const Offset(0, 8),
               ),
             ],
           ),
@@ -1371,50 +1436,70 @@ class _ProductListScreenState extends State<ProductListScreen>
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 10,
+                        vertical:   4,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.20),
+                        color:        AppPalette.primary.withOpacity(0.25),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppPalette.primary.withOpacity(0.40),
+                        ),
                       ),
                       child: Text(
-                        _isGuest
-                            ? '🎁 New Customer Offer'
-                            : '🔥 Flash Sale',
+                        _isGuest ? '🎁 New Customer Offer' : '🔥 Flash Sale',
                         style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 11,
+                          color:      AppPalette.primaryLight,
+                          fontSize:   11,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Text(
                       _isGuest
                           ? 'Sign in & get 10% off your first fabric order!'
                           : 'Premium Ankara & Lace — Up to 30% OFF this week!',
                       style: GoogleFonts.poppins(
-                        color: Colors.white,
+                        color:      Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        height: 1.4,
+                        fontSize:   14,
+                        height:     1.4,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     GestureDetector(
                       onTap: _isGuest ? _goToLogin : null,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 7),
+                          horizontal: 16,
+                          vertical:   8,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppPalette.primaryDark,
+                              AppPalette.primary,
+                              AppPalette.primaryLight,
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color:      AppPalette.primary
+                                  .withOpacity(0.40),
+                              blurRadius: 10,
+                              offset:     const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: Text(
                           _isGuest ? 'Sign In Now' : 'Shop Now',
                           style: GoogleFonts.poppins(
-                            color: colors.brandPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
+                            color:      AppPalette.secondary,
+                            fontWeight: FontWeight.w800,
+                            fontSize:   12,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
@@ -1422,18 +1507,36 @@ class _ProductListScreenState extends State<ProductListScreen>
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
+              // Decorative gold emblem
               Container(
-                width: 64,
-                height: 64,
+                width:  68,
+                height: 68,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  gradient: const LinearGradient(
+                    colors: [AppPalette.primaryDark, AppPalette.primary],
+                    begin:  Alignment.topLeft,
+                    end:    Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color:      AppPalette.primary.withOpacity(0.40),
+                      blurRadius: 14,
+                      offset:     Offset.zero,
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.style_rounded,
-                  color: Colors.white,
-                  size: 36,
+                child: Center(
+                  child: Text(
+                    'PF',
+                    style: GoogleFonts.cinzel(
+                      color:         AppPalette.secondary,
+                      fontSize:      20,
+                      fontWeight:    FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1445,66 +1548,80 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── OCCASION ROW ──────────────────────────────────────────────────────────
 
-  Widget _buildOccasionRow(dynamic colors) {
+  Widget _buildOccasionRow(AppThemeColors colors) {
+    final isDark = context.isDarkMode;
+
     final occasions = [
       _OccasionData(
         label: 'Wedding',
         emoji: '💍',
-        color: const Color(0xFFFCE4EC),
+        color: isDark ? const Color(0xFF2A1020) : const Color(0xFFFCE4EC),
       ),
       _OccasionData(
         label: 'Sallah',
         emoji: '🌙',
-        color: const Color(0xFFE8F5E9),
+        color: isDark ? const Color(0xFF0A1F14) : const Color(0xFFE8F5E9),
       ),
       _OccasionData(
         label: 'Naming',
         emoji: '👶',
-        color: const Color(0xFFE3F2FD),
+        color: isDark ? const Color(0xFF0A1428) : const Color(0xFFE3F2FD),
       ),
       _OccasionData(
         label: 'Birthday',
         emoji: '🎂',
-        color: const Color(0xFFFFF9C4),
+        color: isDark ? const Color(0xFF1A1500) : const Color(0xFFFFF9C4),
       ),
       _OccasionData(
         label: 'Corporate',
         emoji: '👔',
-        color: const Color(0xFFEDE7F6),
+        color: isDark ? const Color(0xFF160D2E) : const Color(0xFFEDE7F6),
       ),
       _OccasionData(
         label: 'Burial',
         emoji: '🕊️',
-        color: const Color(0xFFF3E5F5),
+        color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF3E5F5),
       ),
     ];
 
     return SizedBox(
       height: 88,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding:         const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: occasions.length,
+        itemCount:       occasions.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
-          final o = occasions[i];
+          final o        = occasions[i];
+          final isSelected = _selectedCategory == o.label;
+
           return GestureDetector(
-            onTap: () => setState(
-                () => _selectedCategory = o.label),
+            onTap: () => setState(() => _selectedCategory = o.label),
             child: Column(
               children: [
-                Container(
-                  width: 56,
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width:  56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: o.color,
+                    color:        o.color,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: _selectedCategory == o.label
-                          ? colors.brandPrimary
+                      color: isSelected
+                          ? AppPalette.primary
                           : Colors.transparent,
                       width: 2,
                     ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color:      AppPalette.primary
+                                  .withOpacity(0.30),
+                              blurRadius: 10,
+                              offset:     Offset.zero,
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Center(
                     child: Text(
@@ -1517,9 +1634,13 @@ class _ProductListScreenState extends State<ProductListScreen>
                 Text(
                   o.label,
                   style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textPrimary,
+                    fontSize:   10,
+                    fontWeight: isSelected
+                        ? FontWeight.w700
+                        : FontWeight.w600,
+                    color: isSelected
+                        ? AppPalette.primary
+                        : colors.textPrimary,
                   ),
                 ),
               ],
@@ -1535,20 +1656,19 @@ class _ProductListScreenState extends State<ProductListScreen>
   Widget _buildCategoryChips(
     List<String> categories,
     String effectiveCategory,
-    dynamic colors,
+    AppThemeColors colors,
   ) {
     return SizedBox(
       height: 42,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding:         const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
+        itemCount:       categories.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
-          final label = categories[i];
+          final label    = categories[i];
           final selected = label == effectiveCategory;
 
-          // Find matching emoji
           final matchItem = _TextileCategories.items.firstWhere(
             (e) => e['label'] == label,
             orElse: () => {'emoji': '🧵'},
@@ -1556,29 +1676,32 @@ class _ProductListScreenState extends State<ProductListScreen>
           final emoji = matchItem['emoji'] as String;
 
           return GestureDetector(
-            onTap: () =>
-                setState(() => _selectedCategory = label),
+            onTap: () => setState(() => _selectedCategory = label),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 8),
+                horizontal: 14,
+                vertical:   8,
+              ),
               decoration: BoxDecoration(
-                color: selected
-                    ? colors.brandPrimary
-                    : colors.surface,
+                gradient: selected
+                    ? const LinearGradient(
+                        colors: [AppPalette.primaryDark, AppPalette.primary],
+                      )
+                    : null,
+                color:        selected ? null : colors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: selected
-                      ? colors.brandPrimary
+                      ? AppPalette.primary
                       : colors.borderSoft,
                 ),
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                          color:
-                              colors.brandPrimary.withOpacity(0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                          color:      AppPalette.primary.withOpacity(0.30),
+                          blurRadius: 10,
+                          offset:     const Offset(0, 3),
                         ),
                       ]
                     : [],
@@ -1586,17 +1709,16 @@ class _ProductListScreenState extends State<ProductListScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(emoji,
-                      style: const TextStyle(fontSize: 13)),
+                  Text(emoji, style: const TextStyle(fontSize: 13)),
                   const SizedBox(width: 6),
                   Text(
                     label,
                     style: GoogleFonts.poppins(
                       color: selected
-                          ? Colors.white
+                          ? AppPalette.secondary   // black on gold
                           : colors.textPrimary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontSize:   12,
                     ),
                   ),
                 ],
@@ -1610,18 +1732,34 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── GENDER ROW ────────────────────────────────────────────────────────────
 
-  Widget _buildGenderRow(dynamic colors) {
+  Widget _buildGenderRow(AppThemeColors colors) {
+    final isDark  = context.isDarkMode;
+
     final genders = [
-      {'label': 'Men', 'emoji': '👔', 'color': const Color(0xFFE3F2FD)},
-      {'label': 'Women', 'emoji': '👗', 'color': const Color(0xFFFCE4EC)},
-      {'label': 'Children', 'emoji': '👧', 'color': const Color(0xFFF9FBE7)},
+      {
+        'label': 'Men',
+        'emoji': '👔',
+        'color': isDark ? const Color(0xFF0A1428) : const Color(0xFFE3F2FD),
+      },
+      {
+        'label': 'Women',
+        'emoji': '👗',
+        'color': isDark ? const Color(0xFF2A1020) : const Color(0xFFFCE4EC),
+      },
+      {
+        'label': 'Children',
+        'emoji': '👧',
+        'color': isDark ? const Color(0xFF1A1500) : const Color(0xFFF9FBE7),
+      },
     ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: genders.map((g) {
-          final label = g['label'] as String;
+          final label      = g['label'] as String;
+          final isSelected = _selectedCategory == label;
+
           return Expanded(
             child: Padding(
               padding: EdgeInsets.only(
@@ -1630,17 +1768,28 @@ class _ProductListScreenState extends State<ProductListScreen>
               child: GestureDetector(
                 onTap: () =>
                     setState(() => _selectedCategory = label),
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   height: 64,
                   decoration: BoxDecoration(
-                    color: g['color'] as Color,
+                    color:        g['color'] as Color,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: _selectedCategory == label
-                          ? colors.brandPrimary
+                      color: isSelected
+                          ? AppPalette.primary
                           : Colors.transparent,
                       width: 2,
                     ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color:      AppPalette.primary
+                                  .withOpacity(0.25),
+                              blurRadius: 10,
+                              offset:     Offset.zero,
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1654,8 +1803,10 @@ class _ProductListScreenState extends State<ProductListScreen>
                         label,
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: colors.textPrimary,
+                          fontSize:   13,
+                          color: isSelected
+                              ? AppPalette.primary
+                              : colors.textPrimary,
                         ),
                       ),
                     ],
@@ -1675,24 +1826,24 @@ class _ProductListScreenState extends State<ProductListScreen>
     BuildContext context, {
     required List<ProductModel> items,
     required List<String> favorites,
-    double cardWidth = 180,
+    double cardWidth  = 180,
     double cardHeight = 220,
   }) {
     return SizedBox(
       height: cardHeight,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding:         const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: items.length,
+        itemCount:       items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (_, i) {
           final product = items[i];
-          final isFav = favorites.contains(product.id);
+          final isFav   = favorites.contains(product.id);
           return _HorizontalProductCard(
-            product: product,
+            product:    product,
             isFavorite: isFav,
-            width: cardWidth,
-            onTap: () => _openProduct(context, product),
+            width:      cardWidth,
+            onTap:      () => _openProduct(context, product),
             onFavorite: () => _toggleFav(product.id),
           );
         },
@@ -1703,7 +1854,7 @@ class _ProductListScreenState extends State<ProductListScreen>
   // ── SECTION HEADER ────────────────────────────────────────────────────────
 
   Widget _buildSectionHeader(
-    dynamic colors, {
+    AppThemeColors colors, {
     required String title,
     String? subtitle,
     String? actionLabel,
@@ -1713,11 +1864,16 @@ class _ProductListScreenState extends State<ProductListScreen>
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Row(
         children: [
+          // Gold gradient accent bar
           Container(
-            width: 4,
+            width:  4,
             height: 20,
             decoration: BoxDecoration(
-              color: colors.brandPrimary,
+              gradient: const LinearGradient(
+                colors: [AppPalette.primaryDark, AppPalette.primaryLight],
+                begin:  Alignment.topCenter,
+                end:    Alignment.bottomCenter,
+              ),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -1730,8 +1886,8 @@ class _ProductListScreenState extends State<ProductListScreen>
                   title,
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: colors.textPrimary,
+                    fontSize:   16,
+                    color:      colors.textPrimary,
                   ),
                 ),
                 if (subtitle != null)
@@ -1739,21 +1895,33 @@ class _ProductListScreenState extends State<ProductListScreen>
                     subtitle,
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: colors.textSecondary,
+                      color:    colors.textSecondary,
                     ),
                   ),
               ],
             ),
           ),
           if (actionLabel != null && onAction != null)
-            TextButton(
-              onPressed: onAction,
-              child: Text(
-                actionLabel,
-                style: GoogleFonts.poppins(
-                  color: colors.brandPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+            GestureDetector(
+              onTap: onAction,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical:   6,
+                ),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppPalette.primaryDark, AppPalette.primary],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  actionLabel,
+                  style: GoogleFonts.poppins(
+                    color:      AppPalette.secondary,
+                    fontWeight: FontWeight.w700,
+                    fontSize:   12,
+                  ),
                 ),
               ),
             ),
@@ -1773,8 +1941,8 @@ class _ProductListScreenState extends State<ProductListScreen>
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: EmptyStateCard(
-          icon: icon,
-          title: title,
+          icon:     icon,
+          title:    title,
           subtitle: subtitle,
         ),
       ),
@@ -1783,21 +1951,23 @@ class _ProductListScreenState extends State<ProductListScreen>
 
   // ── BOTTOM PROMO STRIP ────────────────────────────────────────────────────
 
-  Widget _buildBottomPromoStrip(dynamic colors) {
+  Widget _buildBottomPromoStrip(AppThemeColors colors) {
+    final isDark = context.isDarkMode;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colors.cream,
+          color: isDark ? AppPalette.darkGoldGlow : AppPalette.paleGold,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: colors.brandPrimary.withOpacity(0.20),
+            color: AppPalette.primary.withOpacity(isDark ? 0.30 : 0.20),
           ),
         ),
         child: Row(
           children: [
-            Text('🧵', style: const TextStyle(fontSize: 28)),
+            const Text('🧵', style: TextStyle(fontSize: 28)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1807,15 +1977,15 @@ class _ProductListScreenState extends State<ProductListScreen>
                     'Free Delivery',
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: colors.textPrimary,
+                      fontSize:   14,
+                      color:      colors.textPrimary,
                     ),
                   ),
                   Text(
                     'On all orders above ₦25,000 within Lagos',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: colors.textSecondary,
+                      color:    colors.textSecondary,
                     ),
                   ),
                 ],
@@ -1823,8 +1993,8 @@ class _ProductListScreenState extends State<ProductListScreen>
             ),
             Icon(
               Icons.local_shipping_outlined,
-              color: colors.brandPrimary,
-              size: 26,
+              color: AppPalette.primary,
+              size:  26,
             ),
           ],
         ),
@@ -1832,22 +2002,33 @@ class _ProductListScreenState extends State<ProductListScreen>
     );
   }
 
-  // ── STANDALONE BOTTOM NAV (fallback) ──────────────────────────────────────
+  // ── STANDALONE BOTTOM NAV ─────────────────────────────────────────────────
 
   Widget _buildStandaloneBottomNav(BuildContext context) {
     final colors = context.appColors;
+    final isDark  = context.isDarkMode;
+
     return StreamBuilder<int>(
       stream: _firebaseService.watchCartCount(),
       builder: (context, cartSnap) {
         final count = cartSnap.data ?? 0;
+
         return Container(
           decoration: BoxDecoration(
             color: colors.surface,
+            border: Border(
+              top: BorderSide(
+                color: AppPalette.primary.withOpacity(
+                  isDark ? 0.30 : 0.15,
+                ),
+                width: 1,
+              ),
+            ),
             boxShadow: [
               BoxShadow(
-                color: colors.shadow,
+                color:      colors.shadow,
                 blurRadius: 16,
-                offset: const Offset(0, -4),
+                offset:     const Offset(0, -4),
               ),
             ],
             borderRadius: const BorderRadius.vertical(
@@ -1857,40 +2038,33 @@ class _ProductListScreenState extends State<ProductListScreen>
           child: SafeArea(
             top: false,
             child: BottomNavigationBar(
-              currentIndex: 0,
-              backgroundColor: colors.surface,
-              selectedItemColor: colors.brandPrimary,
+              currentIndex:        0,
+              backgroundColor:     Colors.transparent,
+              selectedItemColor:   AppPalette.primary,
               unselectedItemColor: colors.textSecondary,
-              elevation: 0,
+              elevation:           0,
               selectedLabelStyle: GoogleFonts.poppins(
                 fontWeight: FontWeight.w700,
-                fontSize: 11,
+                fontSize:   11,
               ),
               unselectedLabelStyle: GoogleFonts.poppins(
                 fontWeight: FontWeight.w500,
-                fontSize: 11,
+                fontSize:   11,
               ),
               onTap: (index) {
                 switch (index) {
                   case 1:
-                    if (_isGuest) {
-                      _goToLogin();
-                    } else {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const CartScreen()),
-                      );
-                    }
+                    if (_isGuest) { _goToLogin(); return; }
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const CartScreen()),
+                    );
                     break;
                   case 2:
-                    if (_isGuest) {
-                      _goToLogin();
-                    } else {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => OrderScreen()),
-                      );
-                    }
+                    if (_isGuest) { _goToLogin(); return; }
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => OrderScreen()),
+                    );
                     break;
                   case 3:
                     Navigator.of(context).push(
@@ -1902,7 +2076,7 @@ class _ProductListScreenState extends State<ProductListScreen>
               },
               items: [
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.home_rounded),
+                  icon:  Icon(Icons.home_rounded),
                   label: 'Home',
                 ),
                 BottomNavigationBarItem(
@@ -1913,18 +2087,24 @@ class _ProductListScreenState extends State<ProductListScreen>
                       if (count > 0)
                         Positioned(
                           right: -8,
-                          top: -6,
+                          top:   -6,
                           child: Container(
                             padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
-                              color: colors.error,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppPalette.primaryDark,
+                                  AppPalette.primary,
+                                ],
+                              ),
                               shape: BoxShape.circle,
                             ),
                             child: Text(
                               '$count',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color:    AppPalette.secondary,
                                 fontSize: 8,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
@@ -1934,11 +2114,11 @@ class _ProductListScreenState extends State<ProductListScreen>
                   label: 'Cart',
                 ),
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.receipt_long_rounded),
+                  icon:  Icon(Icons.receipt_long_rounded),
                   label: 'Orders',
                 ),
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.person_rounded),
+                  icon:  Icon(Icons.person_rounded),
                   label: 'Profile',
                 ),
               ],
@@ -1959,7 +2139,7 @@ class _MainActionCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final List<Color> gradientColors;
-  final Color iconBg;
+  final Color textColor;
   final VoidCallback onTap;
 
   const _MainActionCard({
@@ -1967,7 +2147,7 @@ class _MainActionCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.gradientColors,
-    required this.iconBg,
+    required this.textColor,
     required this.onTap,
   });
 
@@ -1976,20 +2156,20 @@ class _MainActionCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 130,
+        height:  130,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin:  Alignment.topLeft,
+            end:    Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: gradientColors.first.withOpacity(0.30),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
+              color:      gradientColors.last.withOpacity(0.35),
+              blurRadius: 14,
+              offset:     const Offset(0, 6),
             ),
           ],
         ),
@@ -1997,30 +2177,34 @@ class _MainActionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width:  44,
+              height: 44,
               decoration: BoxDecoration(
-                color: iconBg,
+                color:        Colors.white.withOpacity(0.18),
                 borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.25),
+                  width: 1,
+                ),
               ),
-              child: Icon(icon, color: Colors.white, size: 24),
+              child: Icon(icon, color: textColor, size: 24),
             ),
             const Spacer(),
             Text(
               title,
               style: GoogleFonts.poppins(
-                color: Colors.white,
+                color:      textColor,
                 fontWeight: FontWeight.w800,
-                fontSize: 15,
-                height: 1.2,
+                fontSize:   15,
+                height:     1.2,
               ),
             ),
             const SizedBox(height: 3),
             Text(
               subtitle,
               style: GoogleFonts.poppins(
-                color: Colors.white.withOpacity(0.80),
-                fontSize: 10,
+                color:      textColor.withOpacity(0.75),
+                fontSize:   10,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -2037,14 +2221,16 @@ class _MainActionCard extends StatelessWidget {
 
 class _QuickActionItem extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final Color bgColor;
+  final String   label;
+  final Color    bgColor;
+  final Color    iconColor;
   final VoidCallback onTap;
 
   const _QuickActionItem({
     required this.icon,
     required this.label,
     required this.bgColor,
+    required this.iconColor,
     required this.onTap,
   });
 
@@ -2054,37 +2240,33 @@ class _QuickActionItem extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
+      onTap:        onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         child: Column(
           children: [
             Container(
-              width: 52,
+              width:  52,
               height: 52,
               decoration: BoxDecoration(
-                color: bgColor,
+                color:        bgColor,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: colors.shadow,
+                    color:      colors.shadow,
                     blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    offset:     const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                color: colors.iconOnLightTint,
-                size: 22,
-              ),
+              child: Icon(icon, color: iconColor, size: 22),
             ),
             const SizedBox(height: 6),
             Text(
               label,
               style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: colors.textPrimary,
+                fontSize:   11,
+                color:      colors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2096,7 +2278,7 @@ class _QuickActionItem extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// _HorizontalProductCard — For trending/new arrivals/best sellers rows
+// _HorizontalProductCard
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _HorizontalProductCard extends StatelessWidget {
@@ -2126,14 +2308,14 @@ class _HorizontalProductCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AppSurfaceCard(
-        padding: EdgeInsets.zero,
+        padding:      EdgeInsets.zero,
         borderRadius: BorderRadius.circular(22),
         child: SizedBox(
           width: width,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image
+              // ── Image ────────────────────────────────────────
               Expanded(
                 child: Stack(
                   children: [
@@ -2145,7 +2327,7 @@ class _HorizontalProductCard extends StatelessWidget {
                           ? Image.network(
                               product.imageUrl,
                               width: double.infinity,
-                              fit: BoxFit.cover,
+                              fit:   BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
                                   _placeholder(context),
                             )
@@ -2155,20 +2337,22 @@ class _HorizontalProductCard extends StatelessWidget {
                     // Discount badge
                     if (product.hasDiscount)
                       Positioned(
-                        top: 8,
+                        top:  8,
                         left: 8,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical:   4,
+                          ),
                           decoration: BoxDecoration(
-                            color: colors.error,
+                            color:        colors.error,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             product.discountLabel,
                             style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 10,
+                              color:      Colors.white,
+                              fontSize:   10,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -2178,7 +2362,7 @@ class _HorizontalProductCard extends StatelessWidget {
                     // Status chips
                     if (!product.hasDiscount)
                       Positioned(
-                        top: 8,
+                        top:  8,
                         left: 8,
                         child: Column(
                           crossAxisAlignment:
@@ -2187,37 +2371,36 @@ class _HorizontalProductCard extends StatelessWidget {
                             if (product.isNewArrival)
                               const AppStatusChip(
                                 label: 'New',
-                                tone: AppStatusChipTone.success,
+                                tone:  AppStatusChipTone.success,
                               ),
                             if (product.isTrending)
                               const Padding(
                                 padding: EdgeInsets.only(top: 4),
                                 child: AppStatusChip(
                                   label: 'Hot',
-                                  tone: AppStatusChipTone.warning,
+                                  tone:  AppStatusChipTone.warning,
                                 ),
                               ),
                           ],
                         ),
                       ),
 
-                    // Wishlist button
+                    // Wishlist
                     Positioned(
-                      top: 8,
+                      top:   8,
                       right: 8,
                       child: GestureDetector(
                         onTap: onFavorite,
                         child: Container(
-                          width: 30,
+                          width:  30,
                           height: 30,
                           decoration: BoxDecoration(
-                            color:
-                                Colors.white.withOpacity(0.90),
-                            shape: BoxShape.circle,
+                            color:  Colors.white.withOpacity(0.92),
+                            shape:  BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black
-                                    .withOpacity(0.10),
+                                color:      Colors.black
+                                    .withOpacity(0.12),
                                 blurRadius: 6,
                               ),
                             ],
@@ -2238,7 +2421,7 @@ class _HorizontalProductCard extends StatelessWidget {
                 ),
               ),
 
-              // Info
+              // ── Info ─────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
                 child: Column(
@@ -2250,8 +2433,8 @@ class _HorizontalProductCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        color: colors.textPrimary,
+                        fontSize:   12,
+                        color:      colors.textPrimary,
                       ),
                     ),
                     if (product.fabricType.isNotEmpty) ...[
@@ -2262,31 +2445,29 @@ class _HorizontalProductCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
                           fontSize: 10,
-                          color: colors.textSecondary,
+                          color:    colors.textSecondary,
                         ),
                       ),
                     ],
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        // Discounted price
                         if (product.hasDiscount) ...[
                           Text(
                             '₦${product.discountedPrice.toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              color: colors.brandPrimary,
+                              fontSize:   13,
+                              color:      AppPalette.primary,
                             ),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '₦${product.price.toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              color: colors.textSecondary,
-                              decoration:
-                                  TextDecoration.lineThrough,
+                              fontSize:   10,
+                              color:      colors.textSecondary,
+                              decoration: TextDecoration.lineThrough,
                             ),
                           ),
                         ] else
@@ -2294,8 +2475,8 @@ class _HorizontalProductCard extends StatelessWidget {
                             '₦${product.price.toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              color: colors.brandPrimary,
+                              fontSize:   13,
+                              color:      AppPalette.primary,
                             ),
                           ),
                       ],
@@ -2324,7 +2505,7 @@ class _HorizontalProductCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// _ProductGridCard — 2-column grid layout
+// _ProductGridCard
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _ProductGridCard extends StatelessWidget {
@@ -2352,12 +2533,12 @@ class _ProductGridCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AppSurfaceCard(
-        padding: EdgeInsets.zero,
+        padding:      EdgeInsets.zero,
         borderRadius: BorderRadius.circular(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image section
+            // ── Image ───────────────────────────────────────────
             Expanded(
               flex: 6,
               child: Stack(
@@ -2370,7 +2551,7 @@ class _ProductGridCard extends StatelessWidget {
                         ? Image.network(
                             product.imageUrl,
                             width: double.infinity,
-                            fit: BoxFit.cover,
+                            fit:   BoxFit.cover,
                             loadingBuilder:
                                 (context, child, progress) {
                               if (progress == null) return child;
@@ -2378,9 +2559,9 @@ class _ProductGridCard extends StatelessWidget {
                                 color: context.colorScheme
                                     .surfaceContainerHighest,
                                 child: const Center(
-                                  child:
-                                      CircularProgressIndicator(
+                                  child: CircularProgressIndicator(
                                     strokeWidth: 2,
+                                    color:       AppPalette.primary,
                                   ),
                                 ),
                               );
@@ -2394,20 +2575,22 @@ class _ProductGridCard extends StatelessWidget {
                   // Discount badge
                   if (product.hasDiscount)
                     Positioned(
-                      top: 8,
+                      top:  8,
                       left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical:   4,
+                        ),
                         decoration: BoxDecoration(
-                          color: colors.error,
+                          color:        colors.error,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           product.discountLabel,
                           style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 9,
+                            color:      Colors.white,
+                            fontSize:   9,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -2415,7 +2598,7 @@ class _ProductGridCard extends StatelessWidget {
                     )
                   else
                     Positioned(
-                      top: 8,
+                      top:  8,
                       left: 8,
                       child: Column(
                         crossAxisAlignment:
@@ -2424,14 +2607,14 @@ class _ProductGridCard extends StatelessWidget {
                           if (product.isTrending)
                             const AppStatusChip(
                               label: 'Trending',
-                              tone: AppStatusChipTone.warning,
+                              tone:  AppStatusChipTone.warning,
                             ),
                           if (product.featured)
                             const Padding(
                               padding: EdgeInsets.only(top: 4),
                               child: AppStatusChip(
                                 label: 'Featured',
-                                tone: AppStatusChipTone.primary,
+                                tone:  AppStatusChipTone.primary,
                               ),
                             ),
                           if (product.isNewArrival)
@@ -2439,7 +2622,7 @@ class _ProductGridCard extends StatelessWidget {
                               padding: EdgeInsets.only(top: 4),
                               child: AppStatusChip(
                                 label: 'New',
-                                tone: AppStatusChipTone.success,
+                                tone:  AppStatusChipTone.success,
                               ),
                             ),
                         ],
@@ -2448,20 +2631,20 @@ class _ProductGridCard extends StatelessWidget {
 
                   // Wishlist
                   Positioned(
-                    top: 8,
+                    top:   8,
                     right: 8,
                     child: GestureDetector(
                       onTap: onFavorite,
                       child: Container(
-                        width: 30,
+                        width:  30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.90),
-                          shape: BoxShape.circle,
+                          color:  Colors.white.withOpacity(0.92),
+                          shape:  BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  Colors.black.withOpacity(0.10),
+                              color:      Colors.black
+                                  .withOpacity(0.10),
                               blurRadius: 6,
                             ),
                           ],
@@ -2482,12 +2665,11 @@ class _ProductGridCard extends StatelessWidget {
               ),
             ),
 
-            // Info section
+            // ── Info ────────────────────────────────────────────
             Expanded(
               flex: 4,
               child: Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2497,8 +2679,8 @@ class _ProductGridCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        color: colors.textPrimary,
+                        fontSize:   12,
+                        color:      colors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -2510,7 +2692,7 @@ class _ProductGridCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontSize: 10,
-                        color: colors.textSecondary,
+                        color:    colors.textSecondary,
                       ),
                     ),
                     const Spacer(),
@@ -2525,20 +2707,18 @@ class _ProductGridCard extends StatelessWidget {
                                     Text(
                                       '₦${product.discountedPrice.toStringAsFixed(0)}',
                                       style: GoogleFonts.poppins(
-                                        color: colors.brandPrimary,
-                                        fontWeight:
-                                            FontWeight.w800,
-                                        fontSize: 13,
+                                        color:      AppPalette.primary,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize:   13,
                                       ),
                                     ),
                                     Text(
                                       '₦${product.price.toStringAsFixed(0)}',
                                       style: GoogleFonts.poppins(
-                                        fontSize: 9,
-                                        color:
-                                            colors.textSecondary,
-                                        decoration: TextDecoration
-                                            .lineThrough,
+                                        fontSize:   9,
+                                        color:      colors.textSecondary,
+                                        decoration:
+                                            TextDecoration.lineThrough,
                                       ),
                                     ),
                                   ],
@@ -2546,30 +2726,44 @@ class _ProductGridCard extends StatelessWidget {
                               : Text(
                                   '₦${product.price.toStringAsFixed(0)}',
                                   style: GoogleFonts.poppins(
-                                    color: colors.textPrimary,
+                                    color:      colors.textPrimary,
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 13,
+                                    fontSize:   13,
                                   ),
                                 ),
                         ),
+                        // Gold "Buy" button
                         GestureDetector(
                           onTap: onTap,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
+                              horizontal: 12,
+                              vertical:   6,
                             ),
                             decoration: BoxDecoration(
-                              color: colors.brandPrimary,
-                              borderRadius:
-                                  BorderRadius.circular(10),
+                              gradient: const LinearGradient(
+                                colors: [
+                                  AppPalette.primaryDark,
+                                  AppPalette.primary,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:      AppPalette.primary
+                                      .withOpacity(0.30),
+                                  blurRadius: 8,
+                                  offset:     const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Text(
                               'Buy',
                               style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 10,
+                                color:      AppPalette.secondary,
+                                fontWeight: FontWeight.w800,
+                                fontSize:   10,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),

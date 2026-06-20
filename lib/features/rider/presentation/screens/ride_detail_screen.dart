@@ -1,6 +1,5 @@
-// ── ISMAILTEX — Order Detail Tracker Screen ───────────────────────────────────
-// Replaces the old ride_detail_screen.dart
-// Now shows full textile order details with delivery tracking.
+// lib/features/rider/presentation/screens/ride_detail_screen.dart
+// ── Phlakes Fabrics — Order Detail Tracker Screen ─────────────────────────────
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,10 +9,9 @@ import 'package:pfb/shared/widgets/app_page_scaffold.dart';
 import 'package:pfb/shared/widgets/app_status_chip.dart';
 import 'package:pfb/shared/widgets/app_surface_card.dart';
 import 'package:pfb/core/theme/build_context_theme_x.dart';
+import 'package:pfb/core/theme/app_theme.dart';
 
 class RideDetailScreen extends StatelessWidget {
-  // ── Accept OrderModel so existing push routes still compile ──────────────────
-  // Class kept as RideDetailScreen so admin_rides_screen.dart references work.
   final OrderModel order;
 
   const RideDetailScreen({
@@ -39,14 +37,14 @@ class RideDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firebaseService = FirebaseService();
-    final colors = context.appColors;
+    final colors          = context.appColors;
 
     return AppPageScaffold(
       title: 'Order Details',
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Order ID Header ──────────────────────────────────────
+          // ── Order ID Header ────────────────────────────────────
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.symmetric(
@@ -54,10 +52,12 @@ class RideDetailScreen extends StatelessWidget {
               vertical: 14,
             ),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              // ── Gold gradient header ─────────────────────────
+              gradient: const LinearGradient(
                 colors: [
-                  colors.brandPrimary,
-                  colors.brandPrimary.withOpacity(0.80),
+                  AppPalette.primaryDark,
+                  AppPalette.primary,
+                  AppPalette.primaryLight,
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -68,18 +68,21 @@ class RideDetailScreen extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.receipt_long_rounded,
-                  color: Colors.white,
+                  // ── Black icon on gold gradient ──────────────
+                  color: AppPalette.secondary,
                   size: 22,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Order #${order.shortId}',
                         style: GoogleFonts.poppins(
-                          color: Colors.white,
+                          // ── Black text on gold ───────────────
+                          color: AppPalette.secondary,
                           fontWeight: FontWeight.w800,
                           fontSize: 16,
                         ),
@@ -87,7 +90,9 @@ class RideDetailScreen extends StatelessWidget {
                       Text(
                         order.formattedDate,
                         style: GoogleFonts.poppins(
-                          color: Colors.white.withOpacity(0.80),
+                          // ── Dark text, slightly muted ────────
+                          color: AppPalette.secondary
+                              .withOpacity(0.65),
                           fontSize: 11,
                         ),
                       ),
@@ -102,7 +107,7 @@ class RideDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // ── Delivery Progress Tracker ─────────────────────────────
+          // ── Delivery Progress Tracker ──────────────────────────
           AppSurfaceCard(
             margin: const EdgeInsets.only(bottom: 16),
             borderRadius: BorderRadius.circular(20),
@@ -156,7 +161,7 @@ class RideDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // ── Delivery Address ─────────────────────────────────────
+          // ── Delivery Address ───────────────────────────────────
           if (order.deliveryAddress.isNotEmpty)
             AppSurfaceCard(
               margin: const EdgeInsets.only(bottom: 16),
@@ -170,7 +175,7 @@ class RideDetailScreen extends StatelessWidget {
               ),
             ),
 
-          // ── Order Items ──────────────────────────────────────────
+          // ── Order Items ────────────────────────────────────────
           if (order.items.isNotEmpty)
             AppSurfaceCard(
               margin: const EdgeInsets.only(bottom: 16),
@@ -189,32 +194,39 @@ class RideDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   ...order.items.map((item) {
-                    final name = item['name'] ?? 'Fabric Item';
-                    final qty =
-                        item['quantity'] ?? item['qty'] ?? 1;
+                    final name =
+                        item['name'] ?? 'Fabric Item';
+                    final qty = item['quantity'] ??
+                        item['qty'] ??
+                        1;
                     final price =
-                        ((item['price'] ?? 0) as num).toDouble();
-                    final fabricType = item['fabricType'] ?? '';
-                    final color = item['color'] ?? '';
-                    final size = item['size'] ?? '';
+                        ((item['price'] ?? 0) as num)
+                            .toDouble();
+                    final fabricType =
+                        item['fabricType'] ?? '';
+                    final color  = item['color'] ?? '';
+                    final size   = item['size'] ?? '';
                     final imageUrl = item['imageUrl'] ?? '';
 
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
+                      margin:
+                          const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: colors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius:
+                            BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          // Item image / placeholder
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius:
+                                BorderRadius.circular(10),
                             child: SizedBox(
                               width: 52,
                               height: 52,
-                              child: imageUrl.startsWith('http')
+                              child: imageUrl
+                                      .startsWith('http')
                                   ? Image.network(
                                       imageUrl,
                                       fit: BoxFit.cover,
@@ -223,7 +235,8 @@ class RideDetailScreen extends StatelessWidget {
                                               _fabricPlaceholder(
                                                   colors),
                                     )
-                                  : _fabricPlaceholder(colors),
+                                  : _fabricPlaceholder(
+                                      colors),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -235,7 +248,8 @@ class RideDetailScreen extends StatelessWidget {
                                 Text(
                                   name.toString(),
                                   style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight:
+                                        FontWeight.w600,
                                     color: colors.textPrimary,
                                     fontSize: 13,
                                   ),
@@ -245,14 +259,18 @@ class RideDetailScreen extends StatelessWidget {
                                     size.isNotEmpty)
                                   Text(
                                     [
-                                      if (fabricType.isNotEmpty)
+                                      if (fabricType
+                                          .isNotEmpty)
                                         fabricType,
-                                      if (color.isNotEmpty) color,
-                                      if (size.isNotEmpty) size,
+                                      if (color.isNotEmpty)
+                                        color,
+                                      if (size.isNotEmpty)
+                                        size,
                                     ].join(' · '),
                                     style: GoogleFonts.poppins(
                                       fontSize: 11,
-                                      color: colors.textSecondary,
+                                      color:
+                                          colors.textSecondary,
                                     ),
                                   ),
                                 Text(
@@ -282,7 +300,7 @@ class RideDetailScreen extends StatelessWidget {
               ),
             ),
 
-          // ── Price Breakdown ──────────────────────────────────────
+          // ── Price Breakdown ────────────────────────────────────
           AppSurfaceCard(
             margin: const EdgeInsets.only(bottom: 16),
             borderRadius: BorderRadius.circular(20),
@@ -322,7 +340,7 @@ class RideDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // ── Assignment Info ──────────────────────────────────────
+          // ── Assignment Info ────────────────────────────────────
           if (order.assignedAdminName.isNotEmpty)
             AppSurfaceCard(
               margin: const EdgeInsets.only(bottom: 16),
@@ -341,7 +359,8 @@ class RideDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   _DetailRow(
-                    icon: Icons.admin_panel_settings_outlined,
+                    icon:
+                        Icons.admin_panel_settings_outlined,
                     label: 'Admin',
                     value: order.assignedAdminName,
                     colors: colors,
@@ -364,7 +383,7 @@ class RideDetailScreen extends StatelessWidget {
               ),
             ),
 
-          // ── Cancel Order Button ──────────────────────────────────
+          // ── Cancel Order Button ────────────────────────────────
           if (order.isActive)
             SizedBox(
               width: double.infinity,
@@ -374,7 +393,8 @@ class RideDetailScreen extends StatelessWidget {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius:
+                            BorderRadius.circular(18),
                       ),
                       title: Text(
                         'Cancel Order?',
@@ -425,7 +445,8 @@ class RideDetailScreen extends StatelessWidget {
                   );
 
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(
                       SnackBar(
                         content: Text(
                           'Order cancelled',
@@ -434,7 +455,8 @@ class RideDetailScreen extends StatelessWidget {
                         backgroundColor: colors.error,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius:
+                              BorderRadius.circular(12),
                         ),
                       ),
                     );
@@ -448,10 +470,11 @@ class RideDetailScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 14),
                 ),
-                icon: const Icon(Icons.cancel_outlined, size: 18),
+                icon: const Icon(Icons.cancel_outlined,
+                    size: 18),
                 label: Text(
                   'Cancel Order',
                   style: GoogleFonts.poppins(
@@ -490,11 +513,11 @@ class _ProgressStep extends StatelessWidget {
     this.isLast = false,
   });
 
-  final String label;
+  final String   label;
   final IconData icon;
-  final bool isCompleted;
-  final dynamic colors;
-  final bool isLast;
+  final bool     isCompleted;
+  final dynamic  colors;
+  final bool     isLast;
 
   @override
   Widget build(BuildContext context) {
@@ -538,7 +561,8 @@ class _ProgressStep extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Padding(
-          padding: const EdgeInsets.only(top: 6, bottom: 16),
+          padding:
+              const EdgeInsets.only(top: 6, bottom: 16),
           child: Text(
             label,
             style: GoogleFonts.poppins(
@@ -569,10 +593,10 @@ class _DetailRow extends StatelessWidget {
   });
 
   final IconData icon;
-  final String label;
-  final String value;
-  final dynamic colors;
-  final Color? iconColor;
+  final String   label;
+  final String   value;
+  final dynamic  colors;
+  final Color?   iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -628,11 +652,11 @@ class _PriceLine extends StatelessWidget {
     this.valueColor,
   });
 
-  final String label;
-  final String value;
+  final String  label;
+  final String  value;
   final dynamic colors;
-  final bool isBold;
-  final Color? valueColor;
+  final bool    isBold;
+  final Color?  valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -646,16 +670,18 @@ class _PriceLine extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 13,
               color: colors.textSecondary,
-              fontWeight:
-                  isBold ? FontWeight.w700 : FontWeight.w400,
+              fontWeight: isBold
+                  ? FontWeight.w700
+                  : FontWeight.w400,
             ),
           ),
           Text(
             value,
             style: GoogleFonts.poppins(
               fontSize: isBold ? 15 : 13,
-              fontWeight:
-                  isBold ? FontWeight.w800 : FontWeight.w600,
+              fontWeight: isBold
+                  ? FontWeight.w800
+                  : FontWeight.w600,
               color: valueColor ?? colors.textPrimary,
             ),
           ),

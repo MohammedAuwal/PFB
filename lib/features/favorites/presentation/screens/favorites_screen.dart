@@ -1,5 +1,7 @@
+// lib/features/favorites/presentation/screens/favorites_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pfb/core/theme/app_theme.dart';
 import 'package:pfb/features/products/presentation/screens/product_detail_screen.dart';
 import 'package:pfb/services/firebase_service.dart';
 import 'package:pfb/shared/widgets/app_page_scaffold.dart';
@@ -19,7 +21,8 @@ class FavoritesScreen extends StatelessWidget {
   bool _hasValidImage(String url) {
     final value = url.trim();
     return value.isNotEmpty &&
-        (value.startsWith('http://') || value.startsWith('https://'));
+        (value.startsWith('http://') ||
+            value.startsWith('https://'));
   }
 
   @override
@@ -43,16 +46,19 @@ class FavoritesScreen extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(
               child: Container(
-                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                margin:
+                    const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  // ── Gold gradient header ─────────────────────
+                  gradient: const LinearGradient(
                     colors: [
-                      colors.brandPrimary,
-                      colors.brandPrimary.withOpacity(0.80),
+                      AppPalette.primaryDark,
+                      AppPalette.primary,
+                      AppPalette.primaryLight,
                     ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
@@ -63,7 +69,8 @@ class FavoritesScreen extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.favorite_rounded,
-                      color: Colors.white,
+                      // ── Black icon on gold ───────────────────
+                      color: AppPalette.secondary,
                       size: 20,
                     ),
                     const SizedBox(width: 10),
@@ -71,7 +78,8 @@ class FavoritesScreen extends StatelessWidget {
                       child: Text(
                         '${items.length} item${items.length == 1 ? '' : 's'} saved to your wishlist',
                         style: GoogleFonts.poppins(
-                          color: Colors.white,
+                          // ── Black text on gold ───────────────
+                          color: AppPalette.secondary,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -91,26 +99,34 @@ class FavoritesScreen extends StatelessWidget {
                       product: product,
                       colors: colors,
                       hasValidImage: _hasValidImage,
-                      onTap: () => Navigator.of(context).push(
+                      onTap: () =>
+                          Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ProductDetailScreen(product: product),
+                          builder: (_) => ProductDetailScreen(
+                              product: product),
                         ),
                       ),
                       onRemove: () async {
-                        await firebaseService.toggleFavorite(product.id);
+                        await firebaseService
+                            .toggleFavorite(product.id);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(
                             SnackBar(
                               content: Text(
                                 '${product.name} removed from wishlist',
                                 style: GoogleFonts.poppins(),
                               ),
-                              behavior: SnackBarBehavior.floating,
+                              behavior:
+                                  SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius:
+                                    BorderRadius.circular(12),
                               ),
-                              backgroundColor: colors.brandPrimary,
-                              duration: const Duration(seconds: 2),
+                              backgroundColor:
+                                  colors.brandPrimary,
+                              duration:
+                                  const Duration(seconds: 2),
                             ),
                           );
                         }
@@ -119,7 +135,8 @@ class FavoritesScreen extends StatelessWidget {
                   },
                   childCount: items.length,
                 ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
@@ -127,7 +144,8 @@ class FavoritesScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(
+                child: SizedBox(height: 24)),
           ],
         );
       },
@@ -194,7 +212,8 @@ class FavoritesScreen extends StatelessWidget {
   Widget _buildLoadingGrid(dynamic colors) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
@@ -225,7 +244,8 @@ class FavoritesScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(10),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     Container(
                       height: 12,
@@ -272,12 +292,14 @@ class _WishlistProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final discountPercent = product.originalPrice != null &&
-            product.originalPrice! > product.price
-        ? (((product.originalPrice! - product.price) / product.originalPrice!) *
+    final discountPercent =
+        product.originalPrice != null &&
+                product.originalPrice! > product.price
+            ? (((product.originalPrice! - product.price) /
+                    product.originalPrice!) *
                 100)
             .round()
-        : 0;
+            : 0;
 
     return GestureDetector(
       onTap: onTap,
@@ -327,12 +349,14 @@ class _WishlistProductCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: colors.brandPrimary,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius:
+                              BorderRadius.circular(8),
                         ),
                         child: Text(
                           '-$discountPercent%',
                           style: GoogleFonts.poppins(
-                            color: Colors.white,
+                            // ── Black text on gold badge ───────
+                            color: AppPalette.secondary,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                           ),
@@ -352,7 +376,8 @@ class _WishlistProductCard extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
+                              color:
+                                  Colors.black.withOpacity(0.12),
                               blurRadius: 4,
                             ),
                           ],
@@ -371,21 +396,26 @@ class _WishlistProductCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                padding:
+                    const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     if (product.fabricType != null &&
                         product.fabricType!.isNotEmpty)
                       Container(
-                        margin: const EdgeInsets.only(bottom: 4),
+                        margin:
+                            const EdgeInsets.only(bottom: 4),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: colors.brandPrimary.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(6),
+                          color: colors.brandPrimary
+                              .withOpacity(0.10),
+                          borderRadius:
+                              BorderRadius.circular(6),
                         ),
                         child: Text(
                           product.fabricType!,
@@ -408,7 +438,8 @@ class _WishlistProductCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.end,
                       children: [
                         Text(
                           '₦${product.price.toStringAsFixed(0)}',
@@ -419,7 +450,8 @@ class _WishlistProductCard extends StatelessWidget {
                           ),
                         ),
                         if (product.originalPrice != null &&
-                            product.originalPrice! > product.price) ...[
+                            product.originalPrice! >
+                                product.price) ...[
                           const SizedBox(width: 4),
                           Text(
                             '₦${product.originalPrice!.toStringAsFixed(0)}',
@@ -427,7 +459,8 @@ class _WishlistProductCard extends StatelessWidget {
                               color: colors.textSecondary,
                               fontWeight: FontWeight.w400,
                               fontSize: 10,
-                              decoration: TextDecoration.lineThrough,
+                              decoration:
+                                  TextDecoration.lineThrough,
                             ),
                           ),
                         ],

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/config/routes/route_names.dart';
@@ -5,7 +6,6 @@ import 'package:pfb/core/routing/app_router.dart';
 import 'package:pfb/core/theme/app_theme.dart';
 import 'package:pfb/services/firebase_auth_service.dart';
 import 'package:pfb/services/firebase_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,17 +15,17 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final FirebaseAuthService _authService = FirebaseAuthService();
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseAuthService _authService    = FirebaseAuthService();
+  final FirebaseService     _firebaseService = FirebaseService();
 
-  final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
+  final _nameCtrl            = TextEditingController();
+  final _emailCtrl           = TextEditingController();
+  final _passwordCtrl        = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
-  bool _loading = false;
-  bool _googleLoading = false;
-  bool _obscurePassword = true;
+  bool _loading               = false;
+  bool _googleLoading         = false;
+  bool _obscurePassword       = true;
   bool _obscureConfirmPassword = true;
 
   Future<void> _goAfterSignup() async {
@@ -48,25 +48,22 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _signup() async {
-    final name = _nameCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
-    final password = _passwordCtrl.text.trim();
+    final name            = _nameCtrl.text.trim();
+    final email           = _emailCtrl.text.trim();
+    final password        = _passwordCtrl.text.trim();
     final confirmPassword = _confirmPasswordCtrl.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+    if (name.isEmpty || email.isEmpty ||
+        password.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All fields are required'),
-        ),
+        const SnackBar(content: Text('All fields are required')),
       );
       return;
     }
 
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
-        ),
+        const SnackBar(content: Text('Passwords do not match')),
       );
       return;
     }
@@ -83,18 +80,18 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _loading = true);
 
     try {
-      // Create user without displayName parameter
       final user = await _authService.signUpWithEmailPassword(
-        email: email,
+        email:    email,
         password: password,
       );
 
       if (user == null) {
-        throw AuthFailure('Account creation failed. Please try again.');
+        throw AuthFailure(
+            'Account creation failed. Please try again.');
       }
 
-      // Update the profile with the display name after successful creation
-      await FirebaseAuth.instance.currentUser?.updateProfile(displayName: name);
+      await FirebaseAuth.instance.currentUser
+          ?.updateProfile(displayName: name);
 
       if (!mounted) return;
       await _goAfterSignup();
@@ -102,8 +99,9 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$e'),
-          backgroundColor: AppTheme.colorsOf(context).error.withOpacity(0.9),
+          content:         Text('$e'),
+          backgroundColor: AppTheme.colorsOf(context).error
+              .withOpacity(0.9),
         ),
       );
     } finally {
@@ -127,8 +125,9 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$e'),
-          backgroundColor: AppTheme.colorsOf(context).error.withOpacity(0.9),
+          content:         Text('$e'),
+          backgroundColor: AppTheme.colorsOf(context).error
+              .withOpacity(0.9),
         ),
       );
     } finally {
@@ -152,37 +151,47 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              colors.scaffold,
-              colors.surfaceAlt,
-              colors.scaffold,
-            ],
+            colors: isDark
+                ? const [
+                    Color(0xFF0B0B0B),
+                    Color(0xFF111111),
+                    Color(0xFF0B0B0B),
+                  ]
+                : [
+                    colors.scaffold,
+                    colors.surfaceAlt,
+                    colors.scaffold,
+                  ],
             begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            end:   Alignment.bottomCenter,
           ),
         ),
         child: Stack(
           children: [
-            // ── Background Glow Circles (Red brand theme) ───────────────
+            // ── Gold Glow Circles ─────────────────────────────────
             Positioned(
-              top: -90,
+              top:  -90,
               left: -80,
               child: Container(
-                width: 290,
+                width:  290,
                 height: 290,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: colors.brandPrimary.withOpacity(0.22),
+                  color: AppPalette.primary.withOpacity(
+                    isDark ? 0.08 : 0.12,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: colors.brandPrimary.withOpacity(0.18),
-                      blurRadius: 90,
+                      color:       AppPalette.primary.withOpacity(
+                        isDark ? 0.12 : 0.08,
+                      ),
+                      blurRadius:  90,
                       spreadRadius: 30,
                     ),
                   ],
@@ -190,43 +199,34 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
             Positioned(
-              top: 180,
+              top:   180,
               right: -40,
               child: Container(
-                width: 190,
+                width:  190,
                 height: 190,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: colors.brandPrimary.withOpacity(0.14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.brandPrimary.withOpacity(0.10),
-                      blurRadius: 80,
-                      spreadRadius: 18,
-                    ),
-                  ],
+                  color: AppPalette.primaryLight.withOpacity(
+                    isDark ? 0.06 : 0.10,
+                  ),
                 ),
               ),
             ),
             Positioned(
               bottom: -70,
-              right: -40,
+              right:  -40,
               child: Container(
-                width: 250,
+                width:  250,
                 height: 250,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: colors.brandSecondary.withOpacity(0.18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.brandSecondary.withOpacity(0.14),
-                      blurRadius: 100,
-                      spreadRadius: 20,
-                    ),
-                  ],
+                  color: AppPalette.secondary.withOpacity(
+                    isDark ? 0.25 : 0.12,
+                  ),
                 ),
               ),
             ),
+
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -240,148 +240,230 @@ class _SignupScreenState extends State<SignupScreen> {
                         children: [
                           const SizedBox(height: 40),
 
-                          // ── IsmailTex Brand Logo ───────────────────────
+                          // Brand Logo
                           _buildBrandLogo(colors, isDark),
 
                           const SizedBox(height: 26),
 
-                          // ── Signup Card ────────────────────────────────
+                          // Signup Card
                           Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                            width:   double.infinity,
+                            padding: const EdgeInsets.fromLTRB(
+                                18, 20, 18, 22),
                             decoration: BoxDecoration(
-                              color: colors.card.withOpacity(0.82),
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border.all(color: colors.border),
+                              color: colors.card.withOpacity(
+                                isDark ? 0.90 : 0.85,
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(28),
+                              border: Border.all(
+                                color: AppPalette.primary
+                                    .withOpacity(
+                                  isDark ? 0.25 : 0.15,
+                                ),
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: colors.shadow,
+                                  color:      colors.shadow,
                                   blurRadius: 24,
-                                  offset: const Offset(0, 10),
+                                  offset:
+                                      const Offset(0, 10),
                                 ),
+                                if (isDark)
+                                  BoxShadow(
+                                    color: AppPalette.primary
+                                        .withOpacity(0.05),
+                                    blurRadius:  40,
+                                    offset:      Offset.zero,
+                                  ),
                               ],
                             ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Create account',
                                   style: GoogleFonts.poppins(
-                                    color: colors.textPrimary,
-                                    fontSize: 22,
+                                    color:      colors.textPrimary,
+                                    fontSize:   22,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 Text(
-                                  'Join IsmailTex and enjoy seamless shopping, rides and deliveries.',
+                                  'Join Phlakes Fabrics and discover luxury African textiles.',
                                   style: GoogleFonts.poppins(
-                                    color: colors.textSecondary,
+                                    color:   colors.textSecondary,
                                     fontSize: 13,
+                                    height:   1.5,
                                   ),
                                 ),
                                 const SizedBox(height: 20),
+
                                 _GlassField(
                                   controller: _nameCtrl,
-                                  hint: 'Full name',
-                                  icon: Icons.person_outline_rounded,
+                                  hint:       'Full name',
+                                  icon:
+                                      Icons.person_outline_rounded,
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 12),
                                 _GlassField(
-                                  controller: _emailCtrl,
-                                  hint: 'Email address',
-                                  icon: Icons.email_outlined,
-                                  keyboardType: TextInputType.emailAddress,
+                                  controller:   _emailCtrl,
+                                  hint:         'Email address',
+                                  icon:         Icons.email_outlined,
+                                  keyboardType:
+                                      TextInputType.emailAddress,
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 12),
                                 _GlassField(
-                                  controller: _passwordCtrl,
-                                  hint: 'Password',
-                                  icon: Icons.lock_outline_rounded,
+                                  controller:  _passwordCtrl,
+                                  hint:        'Password',
+                                  icon:        Icons.lock_outline_rounded,
                                   obscureText: _obscurePassword,
                                   suffix: IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
+                                    onPressed: () => setState(() =>
+                                        _obscurePassword =
+                                            !_obscurePassword),
                                     icon: Icon(
                                       _obscurePassword
                                           ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
+                                          : Icons
+                                              .visibility_off_outlined,
                                       color: colors.textSecondary,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 12),
                                 _GlassField(
                                   controller: _confirmPasswordCtrl,
-                                  hint: 'Confirm password',
-                                  icon: Icons.lock_person_outlined,
-                                  obscureText: _obscureConfirmPassword,
+                                  hint:       'Confirm password',
+                                  icon:
+                                      Icons.lock_person_outlined,
+                                  obscureText:
+                                      _obscureConfirmPassword,
                                   suffix: IconButton(
-                                    onPressed: () {
-                                      setState(() {
+                                    onPressed: () => setState(() =>
                                         _obscureConfirmPassword =
-                                            !_obscureConfirmPassword;
-                                      });
-                                    },
+                                            !_obscureConfirmPassword),
                                     icon: Icon(
                                       _obscureConfirmPassword
                                           ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
+                                          : Icons
+                                              .visibility_off_outlined,
                                       color: colors.textSecondary,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 18),
+                                const SizedBox(height: 20),
+
+                                // Create Account — Gold Button
                                 SizedBox(
-                                  width: double.infinity,
+                                  width:  double.infinity,
                                   height: 58,
-                                  child: ElevatedButton(
-                                    onPressed: _loading ? null : _signup,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: colors.brandPrimary,
-                                      foregroundColor: Colors.white,
-                                      elevation: 2,
-                                      shadowColor: colors.brandPrimary.withOpacity(0.35),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: _loading
+                                          ? null
+                                          : const LinearGradient(
+                                              colors: [
+                                                AppPalette
+                                                    .primaryDark,
+                                                AppPalette.primary,
+                                                AppPalette
+                                                    .primaryLight,
+                                              ],
+                                            ),
+                                      borderRadius:
+                                          BorderRadius.circular(16),
+                                      boxShadow: _loading
+                                          ? []
+                                          : [
+                                              BoxShadow(
+                                                color: AppPalette
+                                                    .primary
+                                                    .withOpacity(
+                                                        0.40),
+                                                blurRadius: 16,
+                                                offset:
+                                                    const Offset(
+                                                        0, 6),
+                                              ),
+                                            ],
                                     ),
-                                    child: _loading
-                                        ? const SizedBox(
-                                            width: 22,
-                                            height: 22,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
+                                    child: ElevatedButton(
+                                      onPressed: _loading
+                                          ? null
+                                          : _signup,
+                                      style:
+                                          ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            Colors.transparent,
+                                        shadowColor:
+                                            Colors.transparent,
+                                        foregroundColor:
+                                            AppPalette.secondary,
+                                        shape:
+                                            RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(
+                                                  16),
+                                        ),
+                                      ),
+                                      child: _loading
+                                          ? SizedBox(
+                                              width:  22,
+                                              height: 22,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppPalette
+                                                    .secondary,
+                                              ),
+                                            )
+                                          : Text(
+                                              'Create Account',
+                                              style: GoogleFonts
+                                                  .poppins(
+                                                fontWeight:
+                                                    FontWeight.w800,
+                                                fontSize: 16,
+                                                letterSpacing: 0.5,
+                                                color: AppPalette
+                                                    .secondary,
+                                              ),
                                             ),
-                                          )
-                                        : Text(
-                                            'Create account',
-                                            style: GoogleFonts.poppins(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 16,
-                                            ),
-                                          ),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 18),
+                                const SizedBox(height: 20),
+
+                                // Divider
                                 Row(
                                   children: [
                                     Expanded(
                                       child: Container(
                                         height: 1,
-                                        color: colors.border,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.transparent,
+                                              AppPalette.primary
+                                                  .withOpacity(
+                                                      0.30),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 16),
                                       child: Text(
                                         'or',
                                         style: GoogleFonts.poppins(
-                                          color: colors.textSecondary,
+                                          color:   colors.textSecondary,
                                           fontSize: 13,
                                         ),
                                       ),
@@ -389,56 +471,93 @@ class _SignupScreenState extends State<SignupScreen> {
                                     Expanded(
                                       child: Container(
                                         height: 1,
-                                        color: colors.border,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              AppPalette.primary
+                                                  .withOpacity(
+                                                      0.30),
+                                              Colors.transparent,
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 18),
+                                const SizedBox(height: 20),
+
+                                // Google Button
                                 SizedBox(
-                                  width: double.infinity,
+                                  width:  double.infinity,
                                   height: 58,
                                   child: OutlinedButton(
-                                    onPressed: _googleLoading ? null : _signupWithGoogle,
+                                    onPressed: _googleLoading
+                                        ? null
+                                        : _signupWithGoogle,
                                     style: OutlinedButton.styleFrom(
-                                      backgroundColor: colors.surface.withOpacity(0.5),
-                                      side: BorderSide(color: colors.border, width: 1.5),
+                                      backgroundColor:
+                                          colors.surface
+                                              .withOpacity(0.5),
+                                      side: BorderSide(
+                                        color: AppPalette.primary
+                                            .withOpacity(
+                                          isDark ? 0.35 : 0.20,
+                                        ),
+                                        width: 1.5,
+                                      ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                                        borderRadius:
+                                            BorderRadius.circular(
+                                                16),
                                       ),
                                     ),
                                     child: _googleLoading
                                         ? SizedBox(
-                                            width: 22,
+                                            width:  22,
                                             height: 22,
-                                            child: CircularProgressIndicator(
+                                            child:
+                                                CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              color: colors.brandPrimary,
+                                              color: AppPalette
+                                                  .primary,
                                             ),
                                           )
                                         : Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment
+                                                    .center,
                                             children: [
-                                              // Google Logo
                                               Image.network(
                                                 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                                width: 22,
+                                                width:  22,
                                                 height: 22,
-                                                errorBuilder: (_, __, ___) => Text(
+                                                errorBuilder:
+                                                    (_, __, ___) =>
+                                                        Text(
                                                   'G',
-                                                  style: GoogleFonts.poppins(
-                                                    color: colors.textPrimary,
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.w700,
+                                                  style:
+                                                      GoogleFonts
+                                                          .poppins(
+                                                    color: colors
+                                                        .textPrimary,
+                                                    fontSize:   20,
+                                                    fontWeight:
+                                                        FontWeight
+                                                            .w700,
                                                   ),
                                                 ),
                                               ),
-                                              const SizedBox(width: 12),
+                                              const SizedBox(
+                                                  width: 12),
                                               Text(
                                                 'Continue with Google',
-                                                style: GoogleFonts.poppins(
-                                                  color: colors.textPrimary,
-                                                  fontWeight: FontWeight.w600,
+                                                style: GoogleFonts
+                                                    .poppins(
+                                                  color: colors
+                                                      .textPrimary,
+                                                  fontWeight:
+                                                      FontWeight.w600,
                                                   fontSize: 15,
                                                 ),
                                               ),
@@ -446,14 +565,16 @@ class _SignupScreenState extends State<SignupScreen> {
                                           ),
                                   ),
                                 ),
-                                const SizedBox(height: 22),
+                                const SizedBox(height: 24),
+
+                                // Sign in link
                                 Center(
                                   child: Column(
                                     children: [
                                       Text(
                                         'Already have an account?',
                                         style: GoogleFonts.poppins(
-                                          color: colors.textSecondary,
+                                          color:   colors.textSecondary,
                                           fontSize: 13,
                                         ),
                                       ),
@@ -461,11 +582,12 @@ class _SignupScreenState extends State<SignupScreen> {
                                       GestureDetector(
                                         onTap: _goToLogin,
                                         child: Text(
-                                          'Sign in',
+                                          'Sign In',
                                           style: GoogleFonts.poppins(
-                                            color: colors.brandPrimary,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
+                                            color: AppPalette.primary,
+                                            fontSize:   16,
+                                            fontWeight:
+                                                FontWeight.w700,
                                           ),
                                         ),
                                       ),
@@ -476,11 +598,12 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                           ),
                           const SizedBox(height: 28),
+
                           Text(
                             'By continuing, you agree to our Terms & Privacy Policy.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
-                              color: colors.textSecondary,
+                              color:   colors.textSecondary,
                               fontSize: 12.5,
                             ),
                           ),
@@ -497,120 +620,99 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ── Brand Logo Widget ────────────────────────────────────────────────
-
   Widget _buildBrandLogo(AppThemeColors colors, bool isDark) {
     return Column(
       children: [
-        // Logo Icon — Red gradient circle with 'iT'
         Container(
-          width: 64,
-          height: 64,
+          width:  72,
+          height: 72,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [
-                Color(0xFFCC2222), // primary red
-                Color(0xFFA61818), // primaryDark red
+                AppPalette.primaryDark,
+                AppPalette.primary,
+                AppPalette.primaryLight,
               ],
               begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              end:   Alignment.bottomRight,
             ),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFCC2222).withOpacity(0.40),
-                blurRadius: 18,
+                color:       AppPalette.primary.withOpacity(
+                  isDark ? 0.55 : 0.35,
+                ),
+                blurRadius:  22,
                 spreadRadius: 2,
-                offset: const Offset(0, 5),
+                offset:      const Offset(0, 6),
               ),
             ],
           ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Text(
-                'iT',
-                style: GoogleFonts.montserrat(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1,
-                ),
+          child: Center(
+            child: Text(
+              'PF',
+              style: GoogleFonts.cinzel(
+                color:         AppPalette.secondary,
+                fontSize:      22,
+                fontWeight:    FontWeight.w900,
+                letterSpacing: 2,
               ),
-              // Dot above 'i' — mirrors logo icon
-              Positioned(
-                top: 10,
-                right: 13,
-                child: Container(
-                  width: 5,
-                  height: 5,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
-
-        // "ISMAIL" + "TEX" — mirrors actual logo typography
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: 'ISMAIL',
-                style: GoogleFonts.montserrat(
-                  color: isDark ? Colors.white : const Color(0xFF1A1A1A),
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
+        Column(
+          children: [
+            Text(
+              'PHLAKES',
+              style: GoogleFonts.cinzel(
+                color:         isDark
+                    ? Colors.white
+                    : AppPalette.secondary,
+                fontSize:      24,
+                fontWeight:    FontWeight.w900,
+                letterSpacing: 3,
+              ),
+            ),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [
+                  AppPalette.primaryDark,
+                  AppPalette.primary,
+                  AppPalette.primaryLight,
+                ],
+              ).createShader(bounds),
+              child: Text(
+                'FABRICS',
+                style: GoogleFonts.cinzel(
+                  color:         Colors.white,
+                  fontSize:      18,
+                  fontWeight:    FontWeight.w900,
+                  letterSpacing: 6,
                 ),
               ),
-              TextSpan(
-                text: 'TEX',
-                style: GoogleFonts.montserrat(
-                  color: const Color(0xFFCC2222), // brand red
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-
-        // Red divider line — mirrors logo
+        const SizedBox(height: 8),
         Container(
-          width: 40,
-          height: 2.5,
+          width:  50,
+          height: 2,
           decoration: BoxDecoration(
-            color: const Color(0xFFCC2222),
+            gradient: const LinearGradient(
+              colors: [AppPalette.primaryDark, AppPalette.primaryLight],
+            ),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
         const SizedBox(height: 8),
-
-        // Tagline from logo
         Text(
-          'We weave a better tomorrow.',
+          'Luxury African Fabrics & Textiles',
           style: GoogleFonts.poppins(
-            color: colors.textSecondary,
-            fontSize: 12.5,
+            color:     colors.textSecondary,
+            fontSize:  12.5,
             fontStyle: FontStyle.italic,
             letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'A quality you can trust.',
-          style: GoogleFonts.poppins(
-            color: const Color(0xFFCC2222),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            fontStyle: FontStyle.italic,
           ),
         ),
       ],
@@ -618,21 +720,21 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 }
 
-// ── Glass Field Widget ───────────────────────────────────────────────────
+// ── Glass Field (shared) ───────────────────────────────────────────────────────
 
 class _GlassField extends StatelessWidget {
   final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final bool obscureText;
-  final Widget? suffix;
+  final String      hint;
+  final IconData    icon;
+  final bool        obscureText;
+  final Widget?     suffix;
   final TextInputType? keyboardType;
 
   const _GlassField({
     required this.controller,
     required this.hint,
     required this.icon,
-    this.obscureText = false,
+    this.obscureText  = false,
     this.suffix,
     this.keyboardType,
   });
@@ -640,48 +742,51 @@ class _GlassField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
 
     return Material(
       color: Colors.transparent,
       child: Container(
-        height: 74,
+        height: 64,
         decoration: BoxDecoration(
-          color: colors.surface.withOpacity(0.72),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: colors.border),
+          color:        colors.surface.withOpacity(isDark ? 0.80 : 0.75),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppPalette.primary.withOpacity(isDark ? 0.20 : 0.12),
+          ),
         ),
         child: TextField(
-          controller: controller,
-          obscureText: obscureText,
+          controller:   controller,
+          obscureText:  obscureText,
           keyboardType: keyboardType,
-          cursorColor: colors.brandPrimary,
+          cursorColor:  AppPalette.primary,
           style: GoogleFonts.poppins(
-            color: colors.textPrimary,
+            color:    colors.textPrimary,
             fontSize: 15,
           ),
           decoration: InputDecoration(
-            filled: false,
+            filled:    false,
             fillColor: Colors.transparent,
-            hintText: hint,
+            hintText:  hint,
             hintStyle: GoogleFonts.poppins(
-              color: colors.textSecondary,
+              color:    colors.textSecondary,
               fontSize: 15,
             ),
             prefixIcon: Icon(
               icon,
-              color: colors.iconPrimary,
-              size: 26,
+              color: AppPalette.primary.withOpacity(0.70),
+              size:  22,
             ),
             suffixIcon: suffix,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            errorBorder: InputBorder.none,
+            border:             InputBorder.none,
+            enabledBorder:      InputBorder.none,
+            focusedBorder:      InputBorder.none,
+            disabledBorder:     InputBorder.none,
+            errorBorder:        InputBorder.none,
             focusedErrorBorder: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 8,
-              vertical: 24,
+              vertical:   20,
             ),
           ),
         ),

@@ -1,7 +1,5 @@
-// ── ISMAILTEX — Order Tracking Home Screen ────────────────────────────────────
-// Replaces the old rider_home_screen.dart (ride booking screen).
-// Now shows the customer's active + past orders with delivery tracking.
-// No ride booking, no estimateMovement, no createRide.
+// lib/features/rider/presentation/screens/rider_home_screen.dart
+// ── Phlakes Fabrics — Order Tracking Home Screen ──────────────────────────────
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +21,7 @@ class RiderHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppTheme.colorsOf(context);
+    final colors          = AppTheme.colorsOf(context);
     final firebaseService = FirebaseService();
 
     if (_isGuest) {
@@ -33,22 +31,20 @@ class RiderHomeScreen extends StatelessWidget {
     return StreamBuilder<List<OrderModel>>(
       stream: firebaseService.watchOrders(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState ==
+            ConnectionState.waiting) {
           return Scaffold(
             backgroundColor: colors.scaffold,
-            body: const Center(child: CircularProgressIndicator()),
+            body: const Center(
+                child: CircularProgressIndicator()),
           );
         }
 
-        final orders = snapshot.data ?? [];
-
-        final activeOrders = orders
-            .where((o) => o.isActive)
-            .toList();
-
-        final pastOrders = orders
-            .where((o) => !o.isActive)
-            .toList();
+        final orders       = snapshot.data ?? [];
+        final activeOrders =
+            orders.where((o) => o.isActive).toList();
+        final pastOrders   =
+            orders.where((o) => !o.isActive).toList();
 
         if (orders.isEmpty) {
           return Scaffold(
@@ -61,16 +57,19 @@ class RiderHomeScreen extends StatelessWidget {
           backgroundColor: colors.scaffold,
           body: CustomScrollView(
             slivers: [
-              // ── Header ───────────────────────────────────────────
+              // ── Header ──────────────────────────────────────
               SliverToBoxAdapter(
                 child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  margin: const EdgeInsets.fromLTRB(
+                      16, 16, 16, 8),
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    // ── Gold gradient header ─────────────────
+                    gradient: const LinearGradient(
                       colors: [
-                        colors.brandPrimary,
-                        colors.brandPrimary.withOpacity(0.80),
+                        AppPalette.primaryDark,
+                        AppPalette.primary,
+                        AppPalette.primaryLight,
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -81,7 +80,8 @@ class RiderHomeScreen extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.local_shipping_rounded,
-                        color: Colors.white,
+                        // ── Black icon on gold ───────────────
+                        color: AppPalette.secondary,
                         size: 28,
                       ),
                       const SizedBox(width: 12),
@@ -92,8 +92,10 @@ class RiderHomeScreen extends StatelessWidget {
                           children: [
                             Text(
                               'My Orders',
-                              style: GoogleFonts.playfairDisplay(
-                                color: Colors.white,
+                              style: GoogleFonts
+                                  .playfairDisplay(
+                                // ── Black text on gold ───────
+                                color: AppPalette.secondary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -101,8 +103,8 @@ class RiderHomeScreen extends StatelessWidget {
                             Text(
                               '${orders.length} total · ${activeOrders.length} active',
                               style: GoogleFonts.poppins(
-                                color: Colors.white
-                                    .withOpacity(0.80),
+                                color: AppPalette.secondary
+                                    .withOpacity(0.65),
                                 fontSize: 12,
                               ),
                             ),
@@ -114,7 +116,7 @@ class RiderHomeScreen extends StatelessWidget {
                 ),
               ),
 
-              // ── Active Orders ─────────────────────────────────────
+              // ── Active Orders ──────────────────────────────
               if (activeOrders.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -135,9 +137,11 @@ class RiderHomeScreen extends StatelessWidget {
                       (context, i) => _OrderCard(
                         order: activeOrders[i],
                         colors: colors,
-                        onTap: () => Navigator.of(context).push(
+                        onTap: () =>
+                            Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => RideDetailScreen(
+                            builder: (_) =>
+                                RideDetailScreen(
                               order: activeOrders[i],
                             ),
                           ),
@@ -157,7 +161,7 @@ class RiderHomeScreen extends StatelessWidget {
                 ),
               ],
 
-              // ── Past Orders ───────────────────────────────────────
+              // ── Past Orders ────────────────────────────────
               if (pastOrders.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -178,9 +182,11 @@ class RiderHomeScreen extends StatelessWidget {
                       (context, i) => _OrderCard(
                         order: pastOrders[i],
                         colors: colors,
-                        onTap: () => Navigator.of(context).push(
+                        onTap: () =>
+                            Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => RideDetailScreen(
+                            builder: (_) =>
+                                RideDetailScreen(
                               order: pastOrders[i],
                             ),
                           ),
@@ -209,8 +215,8 @@ class _OrderCard extends StatelessWidget {
     this.onOpenMap,
   });
 
-  final OrderModel order;
-  final dynamic colors;
+  final OrderModel   order;
+  final dynamic      colors;
   final VoidCallback onTap;
   final VoidCallback? onOpenMap;
 
@@ -251,7 +257,6 @@ class _OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Order ID + Status
             Row(
               children: [
                 Container(
@@ -260,7 +265,8 @@ class _OrderCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.brandPrimary.withOpacity(0.10),
+                    color: colors.brandPrimary
+                        .withOpacity(0.10),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -289,10 +295,10 @@ class _OrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // Delivery address
             if (order.deliveryAddress.isNotEmpty)
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.location_on_outlined,
@@ -317,12 +323,12 @@ class _OrderCard extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // Items summary
             if (order.items.isNotEmpty)
               Text(
                 order.items
                     .take(2)
-                    .map((item) => item['name'] ?? 'Fabric')
+                    .map((item) =>
+                        item['name'] ?? 'Fabric')
                     .join(', '),
                 style: GoogleFonts.poppins(
                   fontSize: 12,
@@ -335,7 +341,6 @@ class _OrderCard extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // Total + Map button
             Row(
               children: [
                 Text(
@@ -358,7 +363,8 @@ class _OrderCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: colors.brandPrimary
                             .withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius:
+                            BorderRadius.circular(8),
                         border: Border.all(
                           color: colors.brandPrimary
                               .withOpacity(0.25),
@@ -409,8 +415,8 @@ class _SectionHeader extends StatelessWidget {
     required this.colors,
   });
 
-  final String title;
-  final int count;
+  final String  title;
+  final int     count;
   final dynamic colors;
 
   @override
@@ -441,7 +447,8 @@ class _SectionHeader extends StatelessWidget {
             vertical: 2,
           ),
           decoration: BoxDecoration(
-            color: colors.brandPrimary.withOpacity(0.10),
+            color:
+                colors.brandPrimary.withOpacity(0.10),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
@@ -476,13 +483,15 @@ class _EmptyOrdersState extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: colors.brandPrimary.withOpacity(0.08),
+                color:
+                    colors.brandPrimary.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.receipt_long_rounded,
                 size: 56,
-                color: colors.brandPrimary.withOpacity(0.4),
+                color:
+                    colors.brandPrimary.withOpacity(0.4),
               ),
             ),
             const SizedBox(height: 24),
@@ -496,7 +505,8 @@ class _EmptyOrdersState extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Your IsmailTex fabric orders will appear here.\nStart shopping for premium African textiles!',
+              // ── Brand name updated ───────────────────────
+              'Your Phlakes Fabrics orders will appear here.\nStart shopping for premium African textiles!',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 13,
@@ -521,11 +531,13 @@ class _EmptyOrdersState extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.brandPrimary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(20),
+                    color: colors.brandPrimary
+                        .withOpacity(0.08),
+                    borderRadius:
+                        BorderRadius.circular(20),
                     border: Border.all(
-                      color:
-                          colors.brandPrimary.withOpacity(0.20),
+                      color: colors.brandPrimary
+                          .withOpacity(0.20),
                     ),
                   ),
                   child: Text(
@@ -566,13 +578,15 @@ class _GuestOrdersState extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: colors.brandPrimary.withOpacity(0.08),
+                  color:
+                      colors.brandPrimary.withOpacity(0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.person_outline_rounded,
                   size: 56,
-                  color: colors.brandPrimary.withOpacity(0.5),
+                  color:
+                      colors.brandPrimary.withOpacity(0.5),
                 ),
               ),
               const SizedBox(height: 24),
@@ -586,7 +600,8 @@ class _GuestOrdersState extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Create an account or sign in to track your\nIsmailTex fabric deliveries in real time.',
+                // ── Brand name updated ─────────────────────
+                'Create an account or sign in to track your\nPhlakes Fabrics deliveries in real time.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontSize: 13,
@@ -603,16 +618,19 @@ class _GuestOrdersState extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const LoginScreen(
-                          redirectTo: RouteNames.redirectOrders,
+                          redirectTo:
+                              RouteNames.redirectOrders,
                         ),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.brandPrimary,
-                    foregroundColor: Colors.white,
+                    // ── Black text on gold button ──────────
+                    foregroundColor: AppPalette.secondary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius:
+                          BorderRadius.circular(16),
                     ),
                   ),
                   icon: const Icon(Icons.login_rounded),

@@ -1,3 +1,4 @@
+// lib/features/admin/presentation/screens/add_product_screen.dart
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,6 +15,7 @@ import 'package:pfb/shared/widgets/app_page_scaffold.dart';
 import 'package:pfb/shared/widgets/app_section_title.dart';
 import 'package:pfb/shared/widgets/app_surface_card.dart';
 import 'package:pfb/core/theme/build_context_theme_x.dart';
+import 'package:pfb/core/theme/app_theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Textile-specific constants
@@ -82,50 +84,48 @@ class _AddProductScreenState extends State<AddProductScreen>
   final _imageService = ImagePickService();
   final _firebaseService = FirebaseService();
 
-  // Form key
   final _formKey = GlobalKey<FormState>();
 
   // ── Core Fields ────────────────────────────────────────────────
-  final _nameCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _priceCtrl = TextEditingController();
-  final _stockQtyCtrl = TextEditingController(text: '0');
-  final _variantsCtrl = TextEditingController();
-  final _promoTextCtrl = TextEditingController();
+  final _nameCtrl        = TextEditingController();
+  final _descCtrl        = TextEditingController();
+  final _priceCtrl       = TextEditingController();
+  final _stockQtyCtrl    = TextEditingController(text: '0');
+  final _variantsCtrl    = TextEditingController();
+  final _promoTextCtrl   = TextEditingController();
   final _promoDiscountCtrl = TextEditingController(text: '0');
 
   // ── Textile Fields ─────────────────────────────────────────────
   final _materialCtrl = TextEditingController();
-  final _gsmCtrl = TextEditingController();
-  final _yardageCtrl = TextEditingController(text: '0');
-  final _careCtrl = TextEditingController();
+  final _gsmCtrl      = TextEditingController();
+  final _yardageCtrl  = TextEditingController(text: '0');
+  final _careCtrl     = TextEditingController();
 
   String _selectedFabricType = '';
-  String _selectedOccasion = '';
-  String _selectedGender = 'Unisex';
-  String _selectedOrigin = 'Nigeria';
+  String _selectedOccasion   = '';
+  String _selectedGender     = 'Unisex';
+  String _selectedOrigin     = 'Nigeria';
 
   List<String> _selectedColors = [];
-  List<String> _selectedSizes = [];
+  List<String> _selectedSizes  = [];
 
   // ── Images ─────────────────────────────────────────────────────
   File? _primaryImage;
   final List<File> _additionalImages = [];
 
   // ── Toggles ────────────────────────────────────────────────────
-  bool _featured = false;
-  bool _isTrending = false;
-  bool _inStock = true;
-  bool _isNewArrival = false;
-  bool _isBestSeller = false;
+  bool _featured      = false;
+  bool _isTrending    = false;
+  bool _inStock       = true;
+  bool _isNewArrival  = false;
+  bool _isBestSeller  = false;
 
   // ── State ──────────────────────────────────────────────────────
-  bool _loading = false;
-  int _currentStep = 0;
+  bool _loading      = false;
+  int  _currentStep  = 0;
 
   List<String> _selectedCategories = ['General'];
 
-  // ── Step labels ────────────────────────────────────────────────
   final List<String> _steps = [
     'Basic Info',
     'Fabric Details',
@@ -139,7 +139,6 @@ class _AddProductScreenState extends State<AddProductScreen>
   Future<void> _pickPrimaryImage() async {
     final file = await _imageService.pickImageWithFallback();
     if (file == null) return;
-
     if (await _exceedsMaxSize(file)) return;
     setState(() => _primaryImage = file);
   }
@@ -151,7 +150,6 @@ class _AddProductScreenState extends State<AddProductScreen>
     }
     final file = await _imageService.pickImageWithFallback();
     if (file == null) return;
-
     if (await _exceedsMaxSize(file)) return;
     setState(() => _additionalImages.add(file));
   }
@@ -200,15 +198,13 @@ class _AddProductScreenState extends State<AddProductScreen>
   // ── Submit ────────────────────────────────────────────────────
 
   Future<void> _submit() async {
-    final name = _nameCtrl.text.trim();
+    final name        = _nameCtrl.text.trim();
     final description = _descCtrl.text.trim();
-    final price = double.tryParse(_priceCtrl.text.trim());
-    final stockQty =
-        int.tryParse(_stockQtyCtrl.text.trim()) ?? 0;
+    final price       = double.tryParse(_priceCtrl.text.trim());
+    final stockQty    = int.tryParse(_stockQtyCtrl.text.trim()) ?? 0;
     final promoDiscount =
         double.tryParse(_promoDiscountCtrl.text.trim()) ?? 0;
-    final yardage =
-        double.tryParse(_yardageCtrl.text.trim()) ?? 0;
+    final yardage = double.tryParse(_yardageCtrl.text.trim()) ?? 0;
     final variants = _variantsCtrl.text
         .split(',')
         .map((e) => e.trim())
@@ -229,75 +225,57 @@ class _AddProductScreenState extends State<AddProductScreen>
 
     final categories = _selectedCategories.toSet().toList();
 
-    if (_featured && !categories.contains('Featured')) {
-      categories.add('Featured');
-    }
-    if (_isTrending && !categories.contains('Trending')) {
-      categories.add('Trending');
-    }
-    if (_isNewArrival && !categories.contains('New Arrivals')) {
-      categories.add('New Arrivals');
-    }
-    if (_isBestSeller && !categories.contains('Best Sellers')) {
-      categories.add('Best Sellers');
-    }
+    if (_featured      && !categories.contains('Featured'))     categories.add('Featured');
+    if (_isTrending    && !categories.contains('Trending'))     categories.add('Trending');
+    if (_isNewArrival  && !categories.contains('New Arrivals')) categories.add('New Arrivals');
+    if (_isBestSeller  && !categories.contains('Best Sellers')) categories.add('Best Sellers');
     if (_selectedFabricType.isNotEmpty &&
-        !categories.contains(_selectedFabricType)) {
-      categories.add(_selectedFabricType);
-    }
+        !categories.contains(_selectedFabricType))              categories.add(_selectedFabricType);
     if (_selectedOccasion.isNotEmpty &&
-        !categories.contains(_selectedOccasion)) {
-      categories.add(_selectedOccasion);
-    }
+        !categories.contains(_selectedOccasion))                categories.add(_selectedOccasion);
 
     setState(() => _loading = true);
 
     try {
-      // Upload primary image
-      final imageUrl =
-          await _cloudinaryService.uploadImage(_primaryImage!);
+      final imageUrl = await _cloudinaryService.uploadImage(_primaryImage!);
 
-      // Upload additional images
       final additionalUrls = <String>[];
       for (final img in _additionalImages) {
-        final url = await _cloudinaryService.uploadImage(img);
-        additionalUrls.add(url);
+        additionalUrls.add(await _cloudinaryService.uploadImage(img));
       }
 
-      final id =
-          DateTime.now().millisecondsSinceEpoch.toString();
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
 
       final product = ProductModel(
-        id: id,
-        name: name,
-        description: description,
-        price: price,
-        imageUrl: imageUrl,
-        additionalImages: additionalUrls,
-        createdBy: user.uid,
-        createdAt: DateTime.now(),
-        category: categories.isEmpty ? 'General' : categories.first,
-        categories: categories,
-        featured: _featured,
-        isTrending: _isTrending,
-        inStock: _inStock,
-        stockQuantity: stockQty,
-        variants: variants,
-        promoText: _promoTextCtrl.text.trim(),
+        id:                   id,
+        name:                 name,
+        description:          description,
+        price:                price,
+        imageUrl:             imageUrl,
+        additionalImages:     additionalUrls,
+        createdBy:            user.uid,
+        createdAt:            DateTime.now(),
+        category:             categories.isEmpty ? 'General' : categories.first,
+        categories:           categories,
+        featured:             _featured,
+        isTrending:           _isTrending,
+        inStock:              _inStock,
+        stockQuantity:        stockQty,
+        variants:             variants,
+        promoText:            _promoTextCtrl.text.trim(),
         promoDiscountPercent: promoDiscount,
-        // Textile fields
-        fabricType: _selectedFabricType,
-        material: _materialCtrl.text.trim(),
-        availableColors: _selectedColors,
-        availableSizes: _selectedSizes,
-        yardage: yardage,
-        gsm: _gsmCtrl.text.trim(),
-        careInstructions: _careCtrl.text.trim(),
-        occasion: _selectedOccasion,
-        gender: _selectedGender,
-        origin: _selectedOrigin,
-        isNewArrival: _isNewArrival,
-        isBestSeller: _isBestSeller,
+        fabricType:           _selectedFabricType,
+        material:             _materialCtrl.text.trim(),
+        availableColors:      _selectedColors,
+        availableSizes:       _selectedSizes,
+        yardage:              yardage,
+        gsm:                  _gsmCtrl.text.trim(),
+        careInstructions:     _careCtrl.text.trim(),
+        occasion:             _selectedOccasion,
+        gender:               _selectedGender,
+        origin:               _selectedOrigin,
+        isNewArrival:         _isNewArrival,
+        isBestSeller:         _isBestSeller,
       );
 
       await _repo.addProduct(product);
@@ -312,8 +290,7 @@ class _AddProductScreenState extends State<AddProductScreen>
               const SizedBox(width: 8),
               Text(
                 '${product.name} created successfully!',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -359,10 +336,7 @@ class _AddProductScreenState extends State<AddProductScreen>
       title: 'Add Fabric Product',
       body: Column(
         children: [
-          // Step indicator
           _buildStepIndicator(colors),
-
-          // Step content
           Expanded(
             child: Form(
               key: _formKey,
@@ -378,8 +352,6 @@ class _AddProductScreenState extends State<AddProductScreen>
               ),
             ),
           ),
-
-          // Navigation buttons
           _buildStepNavigation(colors),
         ],
       ),
@@ -390,11 +362,9 @@ class _AddProductScreenState extends State<AddProductScreen>
 
   Widget _buildStepIndicator(dynamic colors) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         children: [
-          // Progress bar
           Row(
             children: List.generate(_steps.length, (i) {
               final isActive = i <= _currentStep;
@@ -405,6 +375,7 @@ class _AddProductScreenState extends State<AddProductScreen>
                     right: i < _steps.length - 1 ? 4 : 0,
                   ),
                   decoration: BoxDecoration(
+                    // ── Gold progress bar ──────────────────────────
                     color: isActive
                         ? colors.brandPrimary
                         : colors.borderSoft,
@@ -416,8 +387,7 @@ class _AddProductScreenState extends State<AddProductScreen>
           ),
           const SizedBox(height: 8),
           Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Step ${_currentStep + 1} of ${_steps.length}',
@@ -453,22 +423,18 @@ class _AddProductScreenState extends State<AddProductScreen>
           icon: Icons.inventory_2_rounded,
           colors: colors,
           children: [
-            AppFormField(
-              controller: _nameCtrl,
-              hintText: 'Product name *',
-            ),
+            AppFormField(controller: _nameCtrl, hintText: 'Product name *'),
             const SizedBox(height: 12),
             AppFormField(
-              controller: _descCtrl,
-              hintText: 'Description *',
-              maxLines: 4,
-            ),
+                controller: _descCtrl,
+                hintText: 'Description *',
+                maxLines: 4),
             const SizedBox(height: 12),
             AppFormField(
               controller: _priceCtrl,
               hintText: 'Price (₦) *',
-              keyboardType: const TextInputType
-                  .numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 12),
             AppFormField(
@@ -506,14 +472,14 @@ class _AddProductScreenState extends State<AddProductScreen>
                     return FilterChip(
                       label: Text(cat),
                       selected: selected,
-                      onSelected: (v) =>
-                          _toggleCategory(cat, v),
+                      onSelected: (v) => _toggleCategory(cat, v),
+                      // ── Gold selected, black text on gold ────────
                       selectedColor: colors.brandPrimary,
                       backgroundColor: colors.surfaceAlt,
-                      checkmarkColor: Colors.white,
+                      checkmarkColor: AppPalette.secondary,
                       labelStyle: GoogleFonts.poppins(
                         color: selected
-                            ? Colors.white
+                            ? AppPalette.secondary
                             : colors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
@@ -551,19 +517,17 @@ class _AddProductScreenState extends State<AddProductScreen>
               children: _TextileData.fabricTypes.map((f) {
                 final selected = _selectedFabricType == f;
                 return GestureDetector(
-                  onTap: () => setState(
-                      () => _selectedFabricType = f),
+                  onTap: () =>
+                      setState(() => _selectedFabricType = f),
                   child: AnimatedContainer(
-                    duration:
-                        const Duration(milliseconds: 150),
+                    duration: const Duration(milliseconds: 150),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: selected
                           ? colors.brandPrimary
                           : colors.surfaceAlt,
-                      borderRadius:
-                          BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: selected
                             ? colors.brandPrimary
@@ -573,8 +537,9 @@ class _AddProductScreenState extends State<AddProductScreen>
                     child: Text(
                       f,
                       style: GoogleFonts.poppins(
+                        // ── Black text on gold chip ──────────────
                         color: selected
-                            ? Colors.white
+                            ? AppPalette.secondary
                             : colors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
@@ -605,8 +570,8 @@ class _AddProductScreenState extends State<AddProductScreen>
             AppFormField(
               controller: _yardageCtrl,
               hintText: 'Yardage (e.g. 6)',
-              keyboardType: const TextInputType
-                  .numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 12),
             AppFormField(
@@ -621,12 +586,9 @@ class _AddProductScreenState extends State<AddProductScreen>
           icon: Icons.tune_rounded,
           colors: colors,
           children: [
-            // Occasion
             _DropdownField(
               label: 'Occasion',
-              value: _selectedOccasion.isEmpty
-                  ? null
-                  : _selectedOccasion,
+              value: _selectedOccasion.isEmpty ? null : _selectedOccasion,
               items: _TextileData.occasions,
               hint: 'Select occasion',
               colors: colors,
@@ -634,7 +596,6 @@ class _AddProductScreenState extends State<AddProductScreen>
                   setState(() => _selectedOccasion = v ?? ''),
             ),
             const SizedBox(height: 12),
-            // Gender
             _DropdownField(
               label: 'Gender',
               value: _selectedGender,
@@ -645,15 +606,14 @@ class _AddProductScreenState extends State<AddProductScreen>
                   setState(() => _selectedGender = v ?? 'Unisex'),
             ),
             const SizedBox(height: 12),
-            // Origin
             _DropdownField(
               label: 'Origin / Country',
               value: _selectedOrigin,
               items: _TextileData.origins,
               hint: 'Select origin',
               colors: colors,
-              onChanged: (v) => setState(
-                  () => _selectedOrigin = v ?? 'Nigeria'),
+              onChanged: (v) =>
+                  setState(() => _selectedOrigin = v ?? 'Nigeria'),
             ),
           ],
         ),
@@ -683,10 +643,8 @@ class _AddProductScreenState extends State<AddProductScreen>
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  _TextileData.commonColors.map((color) {
-                final selected =
-                    _selectedColors.contains(color);
+              children: _TextileData.commonColors.map((color) {
+                final selected = _selectedColors.contains(color);
                 return GestureDetector(
                   onTap: () {
                     setState(() {
@@ -698,16 +656,14 @@ class _AddProductScreenState extends State<AddProductScreen>
                     });
                   },
                   child: AnimatedContainer(
-                    duration:
-                        const Duration(milliseconds: 150),
+                    duration: const Duration(milliseconds: 150),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: selected
                           ? colors.brandPrimary
                           : colors.surfaceAlt,
-                      borderRadius:
-                          BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: selected
                             ? colors.brandPrimary
@@ -719,19 +675,20 @@ class _AddProductScreenState extends State<AddProductScreen>
                       children: [
                         if (selected)
                           const Padding(
-                            padding:
-                                EdgeInsets.only(right: 4),
+                            padding: EdgeInsets.only(right: 4),
                             child: Icon(
                               Icons.check_rounded,
                               size: 12,
-                              color: Colors.white,
+                              // ── Black checkmark on gold ──────────
+                              color: AppPalette.secondary,
                             ),
                           ),
                         Text(
                           color,
                           style: GoogleFonts.poppins(
+                            // ── Black text on gold chip ──────────
                             color: selected
-                                ? Colors.white
+                                ? AppPalette.secondary
                                 : colors.textPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
@@ -743,7 +700,6 @@ class _AddProductScreenState extends State<AddProductScreen>
                 );
               }).toList(),
             ),
-
             if (_selectedColors.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
@@ -776,8 +732,7 @@ class _AddProductScreenState extends State<AddProductScreen>
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  _TextileData.standardSizes.map((size) {
+              children: _TextileData.standardSizes.map((size) {
                 final selected = _selectedSizes.contains(size);
                 return GestureDetector(
                   onTap: () {
@@ -790,16 +745,14 @@ class _AddProductScreenState extends State<AddProductScreen>
                     });
                   },
                   child: AnimatedContainer(
-                    duration:
-                        const Duration(milliseconds: 150),
+                    duration: const Duration(milliseconds: 150),
                     width: 72,
                     height: 42,
                     decoration: BoxDecoration(
                       color: selected
                           ? colors.brandPrimary
                           : colors.surfaceAlt,
-                      borderRadius:
-                          BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: selected
                             ? colors.brandPrimary
@@ -811,8 +764,9 @@ class _AddProductScreenState extends State<AddProductScreen>
                         size,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
+                          // ── Black text on gold size box ──────────
                           color: selected
-                              ? Colors.white
+                              ? AppPalette.secondary
                               : colors.textPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
@@ -823,12 +777,10 @@ class _AddProductScreenState extends State<AddProductScreen>
                 );
               }).toList(),
             ),
-
             const SizedBox(height: 12),
             AppFormField(
               controller: _variantsCtrl,
-              hintText:
-                  'Other variants (comma separated)',
+              hintText: 'Other variants (comma separated)',
             ),
           ],
         ),
@@ -864,12 +816,10 @@ class _AddProductScreenState extends State<AddProductScreen>
                 ),
                 child: _primaryImage == null
                     ? Column(
-                        mainAxisAlignment:
-                            MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons
-                                .add_photo_alternate_outlined,
+                            Icons.add_photo_alternate_outlined,
                             color: colors.textSecondary,
                             size: 48,
                           ),
@@ -893,26 +843,19 @@ class _AddProductScreenState extends State<AddProductScreen>
                         ],
                       )
                     : ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(18),
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.file(
-                              _primaryImage!,
-                              fit: BoxFit.cover,
-                            ),
+                            Image.file(_primaryImage!, fit: BoxFit.cover),
                             Positioned(
                               top: 8,
                               right: 8,
                               child: GestureDetector(
-                                onTap: () => setState(
-                                    () => _primaryImage =
-                                        null),
+                                onTap: () =>
+                                    setState(() => _primaryImage = null),
                                 child: Container(
-                                  padding:
-                                      const EdgeInsets.all(
-                                          6),
+                                  padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
                                     color: colors.error,
                                     shape: BoxShape.circle,
@@ -929,33 +872,27 @@ class _AddProductScreenState extends State<AddProductScreen>
                               bottom: 8,
                               left: 8,
                               child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
                                   vertical: 5,
                                 ),
                                 decoration: BoxDecoration(
                                   color: colors.success,
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                          8),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
                                   children: [
                                     const Icon(
-                                      Icons
-                                          .check_circle_rounded,
+                                      Icons.check_circle_rounded,
                                       color: Colors.white,
                                       size: 14,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Primary Image Set',
-                                      style:
-                                          GoogleFonts.poppins(
+                                      style: GoogleFonts.poppins(
                                         color: Colors.white,
-                                        fontWeight:
-                                            FontWeight.w700,
+                                        fontWeight: FontWeight.w700,
                                         fontSize: 11,
                                       ),
                                     ),
@@ -992,15 +929,11 @@ class _AddProductScreenState extends State<AddProductScreen>
               spacing: 10,
               runSpacing: 10,
               children: [
-                ..._additionalImages
-                    .asMap()
-                    .entries
-                    .map((e) {
+                ..._additionalImages.asMap().entries.map((e) {
                   return Stack(
                     children: [
                       ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12),
                         child: Image.file(
                           e.value,
                           width: 90,
@@ -1012,9 +945,8 @@ class _AddProductScreenState extends State<AddProductScreen>
                         top: 4,
                         right: 4,
                         child: GestureDetector(
-                          onTap: () => setState(() =>
-                              _additionalImages
-                                  .removeAt(e.key)),
+                          onTap: () => setState(
+                              () => _additionalImages.removeAt(e.key)),
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
@@ -1040,8 +972,7 @@ class _AddProductScreenState extends State<AddProductScreen>
                       height: 90,
                       decoration: BoxDecoration(
                         color: colors.surfaceAlt,
-                        borderRadius:
-                            BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: colors.borderSoft,
                           style: BorderStyle.solid,
@@ -1078,18 +1009,15 @@ class _AddProductScreenState extends State<AddProductScreen>
               subtitle: 'Show in Featured Collection',
               icon: Icons.star_rounded,
               value: _featured,
-              onChanged: (v) =>
-                  setState(() => _featured = v),
+              onChanged: (v) => setState(() => _featured = v),
               colors: colors,
             ),
             _ToggleTile(
               label: 'Trending',
-              subtitle:
-                  'Show in Trending Now section',
+              subtitle: 'Show in Trending Now section',
               icon: Icons.local_fire_department_rounded,
               value: _isTrending,
-              onChanged: (v) =>
-                  setState(() => _isTrending = v),
+              onChanged: (v) => setState(() => _isTrending = v),
               colors: colors,
             ),
             _ToggleTile(
@@ -1097,8 +1025,7 @@ class _AddProductScreenState extends State<AddProductScreen>
               subtitle: 'Show in New Arrivals section',
               icon: Icons.fiber_new_rounded,
               value: _isNewArrival,
-              onChanged: (v) =>
-                  setState(() => _isNewArrival = v),
+              onChanged: (v) => setState(() => _isNewArrival = v),
               colors: colors,
             ),
             _ToggleTile(
@@ -1106,8 +1033,7 @@ class _AddProductScreenState extends State<AddProductScreen>
               subtitle: 'Show in Best Sellers section',
               icon: Icons.workspace_premium_rounded,
               value: _isBestSeller,
-              onChanged: (v) =>
-                  setState(() => _isBestSeller = v),
+              onChanged: (v) => setState(() => _isBestSeller = v),
               colors: colors,
             ),
             _ToggleTile(
@@ -1115,8 +1041,7 @@ class _AddProductScreenState extends State<AddProductScreen>
               subtitle: 'Product is available to buy',
               icon: Icons.inventory_rounded,
               value: _inStock,
-              onChanged: (v) =>
-                  setState(() => _inStock = v),
+              onChanged: (v) => setState(() => _inStock = v),
               colors: colors,
             ),
           ],
@@ -1136,16 +1061,14 @@ class _AddProductScreenState extends State<AddProductScreen>
             const SizedBox(height: 12),
             AppFormField(
               controller: _promoDiscountCtrl,
-              hintText: 'Discount percentage (0 = no discount)',
-              keyboardType: const TextInputType
-                  .numberWithOptions(decimal: true),
+              hintText:
+                  'Discount percentage (0 = no discount)',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
-            if (double.tryParse(
-                        _promoDiscountCtrl.text.trim()) !=
+            if (double.tryParse(_promoDiscountCtrl.text.trim()) !=
                     null &&
-                double.tryParse(
-                        _promoDiscountCtrl.text.trim())! >
-                    0)
+                double.tryParse(_promoDiscountCtrl.text.trim())! > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: Container(
@@ -1163,7 +1086,8 @@ class _AddProductScreenState extends State<AddProductScreen>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Product will show ${_promoDiscountCtrl.text.trim()}% OFF badge',
+                        'Product will show '
+                        '${_promoDiscountCtrl.text.trim()}% OFF badge',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF2E7D32),
@@ -1183,8 +1107,7 @@ class _AddProductScreenState extends State<AddProductScreen>
   // ── STEP NAVIGATION ───────────────────────────────────────────
 
   Widget _buildStepNavigation(dynamic colors) {
-    final isLastStep =
-        _currentStep == _steps.length - 1;
+    final isLastStep = _currentStep == _steps.length - 1;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -1202,7 +1125,6 @@ class _AddProductScreenState extends State<AddProductScreen>
         top: false,
         child: Row(
           children: [
-            // Back button
             if (_currentStep > 0)
               Expanded(
                 flex: 2,
@@ -1210,21 +1132,15 @@ class _AddProductScreenState extends State<AddProductScreen>
                   onPressed: () =>
                       setState(() => _currentStep--),
                   icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      size: 18),
+                      Icons.arrow_back_rounded, size: 18),
                   label: Text(
                     'Back',
                     style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                    ),
+                        fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
-
-            if (_currentStep > 0)
-              const SizedBox(width: 12),
-
-            // Next / Submit
+            if (_currentStep > 0) const SizedBox(width: 12),
             Expanded(
               flex: 3,
               child: ElevatedButton.icon(
@@ -1243,7 +1159,8 @@ class _AddProductScreenState extends State<AddProductScreen>
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          // ── Keep white on dark spinner ───────────
+                          color: AppPalette.secondary,
                         ),
                       )
                     : Icon(
@@ -1438,8 +1355,9 @@ class _ToggleTile extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color:
-                value ? colors.brandPrimary : colors.textSecondary,
+            color: value
+                ? colors.brandPrimary
+                : colors.textSecondary,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -1468,7 +1386,9 @@ class _ToggleTile extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: colors.brandPrimary,
+            // ── Switch uses theme (gold track, black thumb) ──
+            activeColor: AppPalette.secondary,
+            activeTrackColor: colors.brandPrimary,
           ),
         ],
       ),

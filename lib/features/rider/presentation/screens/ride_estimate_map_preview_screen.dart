@@ -1,17 +1,11 @@
-// ── ISMAILTEX — Delivery Address Map Preview ──────────────────────────────────
-// Replaces the old ride_estimate_map_preview_screen.dart
-// Now shows a fabric order's delivery address on an interactive map.
-// MovementEstimate has been removed from firebase_service.
-// This screen now accepts origin + destination as simple strings/coords.
+// lib/features/rider/presentation/screens/ride_estimate_map_preview_screen.dart
+// ── Phlakes Fabrics — Delivery Address Map Preview ────────────────────────────
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pfb/core/theme/app_theme.dart';
-
-// ── DeliveryAddressPreview ─────────────────────────────────────────────────────
-// Simple data class replacing MovementEstimate for textile delivery preview.
 
 class DeliveryAddressPreview {
   final String warehouseLabel;
@@ -30,9 +24,6 @@ class DeliveryAddressPreview {
     required this.deliveryLng,
   });
 }
-
-// ── Class kept as RideEstimateMapPreviewScreen ────────────────────────────────
-// So existing import references in cart_screen or product screens still work.
 
 class RideEstimateMapPreviewScreen extends StatelessWidget {
   final DeliveryAddressPreview preview;
@@ -94,7 +85,7 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // ── Map ────────────────────────────────────────────────
+          // ── Map ──────────────────────────────────────────
           Expanded(
             child: FlutterMap(
               options: MapOptions(
@@ -111,18 +102,27 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
                 TileLayer(
                   urlTemplate:
                       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.maamahsmix.app',
+                  userAgentPackageName:
+                      'com.maamahsmix.app',
                 ),
                 MarkerLayer(
                   markers: [
-                    // Warehouse/Origin marker
+                    // ── Warehouse/Origin marker ────────────
                     Marker(
                       point: warehouse,
                       width: 48,
                       height: 48,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: colors.brandPrimary,
+                          // ── Gold gradient marker ─────────
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppPalette.primaryDark,
+                              AppPalette.primary,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Colors.white,
@@ -130,7 +130,7 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: colors.brandPrimary
+                              color: AppPalette.primary
                                   .withOpacity(0.4),
                               blurRadius: 8,
                             ),
@@ -138,12 +138,13 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.store_rounded,
-                          color: Colors.white,
+                          // ── Black icon on gold ───────────
+                          color: AppPalette.secondary,
                           size: 22,
                         ),
                       ),
                     ),
-                    // Delivery destination marker
+                    // ── Delivery destination marker ────────
                     Marker(
                       point: delivery,
                       width: 48,
@@ -158,14 +159,15 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  colors.success.withOpacity(0.4),
+                              color: colors.success
+                                  .withOpacity(0.4),
                               blurRadius: 8,
                             ),
                           ],
                         ),
                         child: const Icon(
                           Icons.home_rounded,
+                          // ── White ok on success green ─────
                           color: Colors.white,
                           size: 22,
                         ),
@@ -177,7 +179,7 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
             ),
           ),
 
-          // ── Info Panel ─────────────────────────────────────────
+          // ── Info Panel ────────────────────────────────────
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(18),
@@ -200,17 +202,19 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Legend
                 Row(
                   children: [
-                    _LegendDot(color: colors.brandPrimary),
+                    _LegendDot(
+                        color: colors.brandPrimary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'IsmailTex Warehouse',
+                            // ── Brand name updated ─────────
+                            'Phlakes Fabrics Warehouse',
                             style: GoogleFonts.poppins(
                               fontSize: 10,
                               color: colors.textSecondary,
@@ -239,7 +243,8 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Your Delivery Address',
@@ -272,10 +277,12 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.brandPrimary.withOpacity(0.08),
+                    color: colors.brandPrimary
+                        .withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: colors.brandPrimary.withOpacity(0.20),
+                      color: colors.brandPrimary
+                          .withOpacity(0.20),
                     ),
                   ),
                   child: Row(
@@ -307,8 +314,6 @@ class RideEstimateMapPreviewScreen extends StatelessWidget {
     );
   }
 }
-
-// ── Legend Dot ─────────────────────────────────────────────────────────────────
 
 class _LegendDot extends StatelessWidget {
   const _LegendDot({required this.color});

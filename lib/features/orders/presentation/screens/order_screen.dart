@@ -1,3 +1,4 @@
+// lib/features/orders/presentation/screens/order_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/core/theme/app_theme.dart';
@@ -49,8 +50,10 @@ class OrderScreen extends StatelessWidget {
     final content = StreamBuilder<List<OrderModel>>(
       stream: firebaseService.watchOrders(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState ==
+            ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator());
         }
 
         final orders = snapshot.data ?? [];
@@ -66,13 +69,15 @@ class OrderScreen extends StatelessWidget {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: colors.brandPrimary.withOpacity(0.08),
+                      color: colors.brandPrimary
+                          .withOpacity(0.08),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.receipt_long_outlined,
                       size: 48,
-                      color: colors.brandPrimary.withOpacity(0.5),
+                      color: colors.brandPrimary
+                          .withOpacity(0.5),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -86,7 +91,8 @@ class OrderScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Your IsmailTex orders will appear here once you place them.',
+                    // ── Brand name updated ───────────────
+                    'Your Phlakes Fabrics orders will appear here once you place them.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
@@ -106,8 +112,10 @@ class OrderScreen extends StatelessWidget {
           itemBuilder: (_, i) {
             final order = orders[i];
 
-            final statusColor = _statusColor(order.status, colors);
-            final statusIcon = _statusIcon(order.status);
+            final statusColor =
+                _statusColor(order.status, colors);
+            final statusIcon =
+                _statusIcon(order.status);
 
             final shortId = order.id.length > 12
                 ? '#${order.id.substring(0, 12).toUpperCase()}'
@@ -117,16 +125,20 @@ class OrderScreen extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => OrderDetailScreen(order: order),
+                    builder: (_) =>
+                        OrderDetailScreen(order: order),
                   ),
                 );
               },
               child: Container(
-                margin: const EdgeInsets.only(bottom: 14),
+                margin:
+                    const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
                   color: colors.card,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: colors.borderSoft),
+                  borderRadius:
+                      BorderRadius.circular(20),
+                  border: Border.all(
+                      color: colors.borderSoft),
                   boxShadow: [
                     BoxShadow(
                       color: colors.shadow,
@@ -145,8 +157,11 @@ class OrderScreen extends StatelessWidget {
                             width: 46,
                             height: 46,
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(14),
+                              color: statusColor
+                                  .withOpacity(0.12),
+                              borderRadius:
+                                  BorderRadius.circular(
+                                      14),
                             ),
                             child: Icon(
                               statusIcon,
@@ -157,21 +172,29 @@ class OrderScreen extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment
+                                      .start,
                               children: [
                                 Text(
                                   shortId,
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w700,
-                                    color: colors.textPrimary,
+                                  style:
+                                      GoogleFonts.poppins(
+                                    fontWeight:
+                                        FontWeight.w700,
+                                    color:
+                                        colors.textPrimary,
                                     fontSize: 14,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${order.items.length} item${order.items.length == 1 ? '' : 's'} · IsmailTex',
-                                  style: GoogleFonts.poppins(
-                                    color: colors.textSecondary,
+                                  // ── Brand updated ──────
+                                  '${order.items.length} item${order.items.length == 1 ? '' : 's'} · Phlakes Fabrics',
+                                  style:
+                                      GoogleFonts.poppins(
+                                    color: colors
+                                        .textSecondary,
                                     fontSize: 11.5,
                                   ),
                                 ),
@@ -179,32 +202,44 @@ class OrderScreen extends StatelessWidget {
                             ),
                           ),
                           Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.end,
                             children: [
                               Text(
                                 '₦${order.totalAmount.toStringAsFixed(2)}',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w800,
-                                  color: colors.brandPrimary,
+                                style:
+                                    GoogleFonts.poppins(
+                                  fontWeight:
+                                      FontWeight.w800,
+                                  color:
+                                      colors.brandPrimary,
                                   fontSize: 15,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(
+                                padding:
+                                    const EdgeInsets
+                                        .symmetric(
                                   horizontal: 8,
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(20),
+                                  color: statusColor
+                                      .withOpacity(0.12),
+                                  borderRadius:
+                                      BorderRadius
+                                          .circular(20),
                                 ),
                                 child: Text(
-                                  order.status.toUpperCase(),
-                                  style: GoogleFonts.poppins(
+                                  order.status
+                                      .toUpperCase(),
+                                  style:
+                                      GoogleFonts.poppins(
                                     color: statusColor,
                                     fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight:
+                                        FontWeight.w800,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -214,10 +249,14 @@ class OrderScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (order.deliveryAddress.isNotEmpty) ...[
-                      Divider(height: 1, color: colors.borderSoft),
+                    if (order.deliveryAddress
+                        .isNotEmpty) ...[
+                      Divider(
+                          height: 1,
+                          color: colors.borderSoft),
                       Padding(
-                        padding: const EdgeInsets.symmetric(
+                        padding:
+                            const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
                         ),
@@ -233,9 +272,11 @@ class OrderScreen extends StatelessWidget {
                               child: Text(
                                 order.deliveryAddress,
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                overflow:
+                                    TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
-                                  color: colors.textSecondary,
+                                  color:
+                                      colors.textSecondary,
                                   fontSize: 11.5,
                                 ),
                               ),

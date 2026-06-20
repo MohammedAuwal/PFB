@@ -1,12 +1,9 @@
-// ── ISMAILTEX — Delivery Dispatch Mode Screen ──────────────────────────────────
-// Converted from driver_mode_screen.dart (ride-based) to
-// Delivery Dispatch Mode — for admin staff dispatching fabric orders.
-//
-// Uses OrderModel instead of RideModel.
-// updateOrderStatus() replaces the removed updateRideStatus().
+// lib/features/admin/presentation/screens/driver_mode_screen.dart
+// ── Phlakes Fabrics — Delivery Dispatch Mode Screen ───────────────────────────
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pfb/core/theme/app_theme.dart';
 import 'package:pfb/models/order_model.dart';
 import 'package:pfb/services/firebase_service.dart';
 import 'package:pfb/shared/widgets/app_page_scaffold.dart';
@@ -14,10 +11,6 @@ import 'package:pfb/shared/widgets/app_section_title.dart';
 import 'package:pfb/shared/widgets/app_status_chip.dart';
 import 'package:pfb/shared/widgets/app_surface_card.dart';
 import 'package:pfb/core/theme/build_context_theme_x.dart';
-
-// ── DriverModeScreen → DeliveryDispatchScreen ──────────────────────────────────
-// Class name kept as DriverModeScreen so admin_rides_screen.dart
-// references don't break. Internally it is now a delivery dispatch tool.
 
 class DriverModeScreen extends StatefulWidget {
   final OrderModel order;
@@ -64,7 +57,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
         ),
       );
 
-      // Auto-pop on delivered/cancelled
       if (status == 'delivered' || status == 'cancelled') {
         if (mounted) Navigator.of(context).pop();
       }
@@ -132,7 +124,7 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Dispatcher Info Banner ───────────────────────────────
+          // ── Dispatcher Info Banner ─────────────────────────────
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.symmetric(
@@ -140,10 +132,12 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
               vertical: 12,
             ),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              // ── Gold gradient banner ──────────────────────────
+              gradient: const LinearGradient(
                 colors: [
-                  colors.brandPrimary,
-                  colors.brandPrimary.withOpacity(0.80),
+                  AppPalette.primaryDark,
+                  AppPalette.primary,
+                  AppPalette.primaryLight,
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -156,12 +150,14 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.20),
+                    // ── Subtle white tint on gold ───────────────
+                    color: AppPalette.secondary.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.local_shipping_rounded,
-                    color: Colors.white,
+                    // ── Black icon on gold ──────────────────────
+                    color: AppPalette.secondary,
                     size: 22,
                   ),
                 ),
@@ -171,9 +167,11 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'IsmailTex Dispatch',
+                        // ── Brand name updated ──────────────────
+                        'Phlakes Fabrics Dispatch',
                         style: GoogleFonts.cinzel(
-                          color: Colors.white,
+                          // ── Black text on gold ────────────────
+                          color: AppPalette.secondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1,
@@ -182,7 +180,9 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                       Text(
                         'Dispatcher: ${widget.dispatcherName}',
                         style: GoogleFonts.poppins(
-                          color: Colors.white.withOpacity(0.85),
+                          // ── Dark text on gold ─────────────────
+                          color: AppPalette.secondary
+                              .withOpacity(0.75),
                           fontSize: 12,
                         ),
                       ),
@@ -193,14 +193,13 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
             ),
           ),
 
-          // ── Order Details Card ────────────────────────────────────
+          // ── Order Details Card ─────────────────────────────────
           AppSurfaceCard(
             borderRadius: BorderRadius.circular(20),
             padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 AppSectionTitle(
                   title: 'Order #${order.shortId}',
                   spacingBottom: 4,
@@ -214,7 +213,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Current status
                 Row(
                   children: [
                     Text(
@@ -232,7 +230,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Delivery address
                 if (order.deliveryAddress.isNotEmpty) ...[
                   _InfoRow(
                     icon: Icons.location_on_rounded,
@@ -243,12 +240,10 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                   const SizedBox(height: 10),
                 ],
 
-                // Order total
                 _InfoRow(
                   icon: Icons.payments_rounded,
                   label: 'Order Total',
-                  value:
-                      '₦${order.totalAmount.toStringAsFixed(0)}',
+                  value: '₦${order.totalAmount.toStringAsFixed(0)}',
                   colors: colors,
                   valueStyle: GoogleFonts.poppins(
                     color: colors.brandPrimary,
@@ -258,7 +253,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Items
                 if (order.items.isNotEmpty) ...[
                   Text(
                     'ITEMS (${order.items.length})',
@@ -278,16 +272,14 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                     ),
                     child: Column(
                       children: order.items.map((item) {
-                        final name =
-                            item['name'] ?? 'Fabric Item';
+                        final name = item['name'] ?? 'Fabric Item';
                         final qty =
                             item['quantity'] ?? item['qty'] ?? 1;
                         final fabricType =
                             item['fabricType'] ?? '';
 
                         return Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: Row(
                             children: [
                               Container(
@@ -320,16 +312,14 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                                         color: colors.textPrimary,
                                       ),
                                       maxLines: 1,
-                                      overflow:
-                                          TextOverflow.ellipsis,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     if (fabricType.isNotEmpty)
                                       Text(
                                         fabricType.toString(),
                                         style: GoogleFonts.poppins(
                                           fontSize: 10,
-                                          color:
-                                              colors.textSecondary,
+                                          color: colors.textSecondary,
                                         ),
                                       ),
                                   ],
@@ -356,7 +346,7 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
 
           const SizedBox(height: 20),
 
-          // ── Dispatch Actions Card ─────────────────────────────────
+          // ── Dispatch Actions Card ──────────────────────────────
           AppSurfaceCard(
             borderRadius: BorderRadius.circular(20),
             padding: const EdgeInsets.all(18),
@@ -374,7 +364,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Processing
                 _DispatchButton(
                   icon: Icons.autorenew_rounded,
                   label: 'Mark as Processing',
@@ -386,7 +375,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Shipped
                 _DispatchButton(
                   icon: Icons.local_shipping_outlined,
                   label: 'Mark as Shipped',
@@ -398,7 +386,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Delivered
                 _DispatchButton(
                   icon: Icons.check_circle_outline_rounded,
                   label: 'Mark as Delivered',
@@ -412,7 +399,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 const Divider(height: 1),
                 const SizedBox(height: 14),
 
-                // Cancel (danger zone)
                 _DispatchButton(
                   icon: Icons.cancel_outlined,
                   label: 'Cancel Order',
@@ -428,7 +414,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
 
           const SizedBox(height: 24),
 
-          // ── Back button ───────────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -439,8 +424,7 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               icon: const Icon(Icons.arrow_back_rounded, size: 18),
               label: Text(

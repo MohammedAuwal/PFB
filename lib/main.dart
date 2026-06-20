@@ -9,10 +9,15 @@ import 'package:pfb/services/fcm_service.dart';
 import 'package:pfb/services/local_notification_service.dart';
 import 'package:pfb/firebase_options.dart';
 
+// ── FIXED: Check Firebase.apps.isEmpty before initializing ───────────────────
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
-    await Firebase.initializeApp();
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
   } catch (_) {}
 
   try {
@@ -36,7 +41,12 @@ Future<void> main() async {
   StackTrace? startupStack;
 
   try {
-    await Firebase.initializeApp(   options: DefaultFirebaseOptions.currentPlatform, ).timeout(const Duration(seconds: 12));
+    // ── FIXED: Only initialize if not already done ───────────────────────────
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(const Duration(seconds: 12));
+    }
   } catch (e, st) {
     startupError = Exception('Firebase init failed: $e');
     startupStack = st;

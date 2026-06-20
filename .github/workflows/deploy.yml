@@ -36,7 +36,7 @@ jobs:
           fi
 
       # IMPORTANT: make sure assets referenced in pubspec.yaml exist
-    - name: Ensure required assets exist
+      - name: Ensure required assets exist
         run: |
           set -euo pipefail
           mkdir -p assets
@@ -55,6 +55,7 @@ jobs:
           fi
 
           ls -la assets || true
+
       - name: Install Dependencies
         run: flutter pub get
 

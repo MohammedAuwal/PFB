@@ -9,10 +9,11 @@ import 'package:pfb/services/fcm_service.dart';
 import 'package:pfb/services/local_notification_service.dart';
 import 'package:pfb/firebase_options.dart';
 
-// ── FIXED: Check Firebase.apps.isEmpty before initializing ───────────────────
+// ── FIXED: Check Firebase.apps.isEmpty ──────────────────────────────────────
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
+    // ✅ Only initialize if not already done
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
@@ -41,7 +42,7 @@ Future<void> main() async {
   StackTrace? startupStack;
 
   try {
-    // ── FIXED: Only initialize if not already done ───────────────────────────
+    // ✅ Only initialize if not already done
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
@@ -93,9 +94,7 @@ Future<void> _initializeFcmNonBlocking() async {
     await FcmService.instance
         .initialize()
         .timeout(const Duration(seconds: 20));
-  } catch (_) {
-    // Do not block app startup if FCM initialization is slow or fails.
-  }
+  } catch (_) {}
 }
 
 class StartupErrorApp extends StatelessWidget {
@@ -123,44 +122,27 @@ class StartupErrorApp extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.white,
-                      size: 56,
-                    ),
+                    const Icon(Icons.error_outline, color: Colors.white, size: 56),
                     const SizedBox(height: 16),
                     const Text(
                       'App failed to start',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     const Text(
                       'Startup error details:',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                     const SizedBox(height: 20),
                     SelectableText(
                       '$error',
-                      style: const TextStyle(
-                        color: Colors.amber,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: Colors.amber, fontSize: 14),
                     ),
                     if (stackTrace != null) ...[
                       const SizedBox(height: 20),
                       SelectableText(
                         '$stackTrace',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                        ),
+                        style: const TextStyle(color: Colors.white70, fontSize: 11),
                       ),
                     ],
                   ],

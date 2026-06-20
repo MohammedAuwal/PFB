@@ -1,0 +1,10 @@
+name: android-ci (disabled)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  disabled:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Disabled. Use android-build.yml."

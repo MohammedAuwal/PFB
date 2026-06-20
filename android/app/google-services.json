@@ -12,7 +12,20 @@
           "package_name": "com.pfb.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1089917254734-l7ue9rdas29tf1fdkilhta9ao6kl8nnr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pfb.app",
+            "certificate_hash": "2fb8b89810fa0578f211ca09dff5a36f9e52894d"
+          }
+        },
+        {
+          "client_id": "1089917254734-tfkid7lmbe20tr9p6u459bvil8qssm7v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC-wnlmBUr8c1kny07uB5jGqdwGq5-GIDc"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1089917254734-tfkid7lmbe20tr9p6u459bvil8qssm7v.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

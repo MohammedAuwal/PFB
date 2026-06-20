@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ── Launch Theme (Splash Screen) ─────────────────────────── -->
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:statusBarColor">#2A0A12</item>
+        <!-- ── Updated to Phlakes Fabrics Black ─────────────────── -->
+        <item name="android:statusBarColor">#0B0B0B</item>
     </style>
 
+    <!-- ── Normal Theme (App Running) ───────────────────────────── -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">#2A0A12</item>
+        <!-- ── Fixed: Was invalid "#f2", now Phlakes Black ─────── -->
+        <item name="android:windowBackground">#0B0B0B</item>
         <item name="android:windowIsTranslucent">false</item>
     </style>
 </resources>

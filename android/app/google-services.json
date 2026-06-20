@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "1089917254734-l7ue9rdas29tf1fdkilhta9ao6kl8nnr.apps.googleusercontent.com",
+          "client_id": "1089917254734-osmsl9tef2f7psjbevbflg810kca8d5r.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.pfb.app",
-            "certificate_hash": "2fb8b89810fa0578f211ca09dff5a36f9e52894d"
+            "certificate_hash": "714ea9b399a4d1f2126b1e6c7e9e9d7dbaa70b78"
           }
         },
         {

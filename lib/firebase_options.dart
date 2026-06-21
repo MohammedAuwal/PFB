@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+/// Default [FirebaseOptions] for use with your Firebase apps.
+/// Project: Phlakes Fabric (phlakesfabric)
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) return web;
@@ -21,20 +23,24 @@ class DefaultFirebaseOptions {
     }
   }
 
+  // ── Web ────────────────────────────────────────────────────────────────────
+  // From: phlakesfabric.web.app / phlakesfabric.firebaseapp.com
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDEYw7A7kyleURxqLFGarqifXG9Bzbsyk4',
-    appId: '1:331362046998:web:bce8f42c493e65c9025137',
-    messagingSenderId: '331362046998',
-    projectId: 'ismailtex-f070d',
-    authDomain: 'ismailtex-f070d.firebaseapp.com',
-    storageBucket: 'ismailtex-f070d.firebasestorage.app',
+    apiKey:            'AIzaSyC-wnlmBUr8c1kny07uB5jGqdwGq5-GIDc',
+    appId:             '1:1089917254734:web::2a98e9d43bf45e964a571f',
+    messagingSenderId: '1089917254734',
+    projectId:         'phlakesfabric',
+    authDomain:        'phlakesfabric.firebaseapp.com',
+    storageBucket:     'phlakesfabric.firebasestorage.app',
   );
 
+  // ── Android ────────────────────────────────────────────────────────────────
+  // Package: com.pfb.app
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDEYw7A7kyleURxqLFGarqifXG9Bzbsyk4',
-    appId: '1:331362046998:android:65b49a4beb457e17025137',
-    messagingSenderId: '331362046998',
-    projectId: 'ismailtex-f070d',
-    storageBucket: 'ismailtex-f070d.firebasestorage.app',
+    apiKey:            'AIzaSyC-wnlmBUr8c1kny07uB5jGqdwGq5-GIDc',
+    appId:             '1:1089917254734:android:d791dca74fb3e77e4a571f',
+    messagingSenderId: '1089917254734',
+    projectId:         'phlakesfabric',
+    storageBucket:     'phlakesfabric.firebasestorage.app',
   );
 }

@@ -17,7 +17,11 @@ class FirebaseAuthService {
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
   })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn ?? GoogleSignIn(
+          // ✅ Configure for Phlakes Fabric
+          scopes: ['email', 'profile'],
+          serverClientId: '1089917254734-tfkid7lmbe20tr9p6u459bvil8qssm7v.apps.googleusercontent.com',
+        );
 
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
@@ -46,7 +50,7 @@ class FirebaseAuthService {
       throw AuthFailure(_mapFirebaseError(e.code, e.message));
     } catch (e) {
       if (e is AuthFailure) rethrow;
-      throw AuthFailure('Login failed. Please try again.');
+      throw AuthFailure('Sign in failed. Please try again.');
     }
   }
 
@@ -70,26 +74,29 @@ class FirebaseAuthService {
       throw AuthFailure(_mapFirebaseError(e.code, e.message));
     } catch (e) {
       if (e is AuthFailure) rethrow;
-      throw AuthFailure('Registration failed. Please try again.');
+      throw AuthFailure('Account creation failed. Please try again.');
     }
   }
 
   Future<User?> signInWithGoogle() async {
     try {
       if (kDebugMode) {
-        debugPrint('Google Sign-In: starting (kIsWeb=$kIsWeb)');
+        debugPrint('🔐 Phlakes Fabric | Google Sign-In: starting (kIsWeb=$kIsWeb)');
       }
 
       UserCredential userCredential;
 
-      // WEB: Use Firebase Auth popup flow (most reliable for Flutter Web).
+      // ── WEB: Use Firebase Auth popup flow ────────────────────────────────
       if (kIsWeb) {
         final provider = GoogleAuthProvider();
         provider.setCustomParameters({'prompt': 'select_account'});
+        provider.addScope('email');
+        provider.addScope('profile');
 
         userCredential = await _firebaseAuth.signInWithPopup(provider);
-      } else {
-        // ANDROID (and other mobile): Use google_sign_in then exchange token with Firebase.
+      } 
+      // ── ANDROID: Use google_sign_in then exchange token ─────────────────
+      else {
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
         if (googleUser == null) {
@@ -97,22 +104,22 @@ class FirebaseAuthService {
         }
 
         if (kDebugMode) {
-          debugPrint('Google Sign-In: account selected ${googleUser.email}');
+          debugPrint('🔐 Phlakes Fabric | Google Sign-In: account selected ${googleUser.email}');
         }
 
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
         if (kDebugMode) {
           debugPrint(
-            'Google Sign-In: idToken exists=${(googleAuth.idToken ?? '').isNotEmpty}, accessToken exists=${(googleAuth.accessToken ?? '').isNotEmpty}',
+            ' Phlakes Fabric | Google Sign-In: idToken=${(googleAuth.idToken ?? '').isNotEmpty}, '
+            'accessToken=${(googleAuth.accessToken ?? '').isNotEmpty}',
           );
         }
 
         if ((googleAuth.idToken ?? '').isEmpty) {
           throw AuthFailure(
-            'Google sign-in failed because no ID token was returned. '
-            'This usually means Firebase/Google OAuth Android configuration is incorrect (SHA-1/SHA-256, package name, google-services.json).',
+            'Google sign-in failed. No ID token returned. '
+            'Verify SHA-1 fingerprint is registered in Firebase Console for com.pfb.app',
           );
         }
 
@@ -126,38 +133,32 @@ class FirebaseAuthService {
 
       final user = userCredential.user;
       if (user == null) {
-        throw AuthFailure('Google sign-in failed. Firebase did not return a user.');
+        throw AuthFailure('Google sign-in failed. Please try again.');
       }
 
       await FcmService.instance.syncTokenForCurrentUser();
 
       if (kDebugMode) {
-        debugPrint('Google Sign-In: success uid=${user.uid}');
+        debugPrint('🔐 Phlakes Fabric | Google Sign-In: success uid=${user.uid}');
       }
 
       return user;
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) {
-        debugPrint(
-          'Google Sign-In FirebaseAuthException: code=${e.code}, message=${e.message}',
-        );
+        debugPrint('🔐 Phlakes Fabric | FirebaseAuthException: code=${e.code}, message=${e.message}');
       }
       throw AuthFailure(_mapFirebaseError(e.code, e.message));
     } on PlatformException catch (e) {
       if (kDebugMode) {
-        debugPrint(
-          'Google Sign-In PlatformException: code=${e.code}, message=${e.message}, details=${e.details}',
-        );
+        debugPrint(' Phlakes Fabric | PlatformException: code=${e.code}, message=${e.message}');
       }
       throw AuthFailure(_mapGooglePlatformError(e));
     } catch (e) {
       if (e is AuthFailure) rethrow;
-
       if (kDebugMode) {
-        debugPrint('Google Sign-In unknown error: $e');
+        debugPrint('🔐 Phlakes Fabric | Unknown error: $e');
       }
-
-      throw AuthFailure('Google Sign-In failed. Details: $e');
+      throw AuthFailure('Google Sign-In failed. Please try again.');
     }
   }
 
@@ -166,8 +167,6 @@ class FirebaseAuthService {
       await FcmService.instance.removeCurrentDeviceTokenForCurrentUser();
     } catch (_) {}
 
-    // On web we used signInWithPopup; no need to call GoogleSignIn().signOut().
-    // Also, GoogleSignIn web signOut can be noisy; we safely skip it.
     if (!kIsWeb) {
       try {
         await _googleSignIn.signOut();
@@ -175,23 +174,26 @@ class FirebaseAuthService {
     }
 
     await _firebaseAuth.signOut();
+    
+    if (kDebugMode) {
+      debugPrint('🔐 Phlakes Fabric | User signed out');
+    }
   }
 
   String _mapGooglePlatformError(PlatformException e) {
     final code = e.code.toLowerCase();
     final message = (e.message ?? '').toLowerCase();
     final details = (e.details ?? '').toString().toLowerCase();
-
     final combined = '$code $message $details';
 
     if (combined.contains('10') ||
         combined.contains('developer_error') ||
         combined.contains('sign_in_failed')) {
-      return 'Google Sign-In configuration error on Android. Check Firebase Google provider, package name, SHA-1, SHA-256, and google-services.json.';
+      return 'Google Sign-In configuration error. Verify SHA-1 fingerprint in Firebase Console.';
     }
 
     if (combined.contains('network_error')) {
-      return 'Network error during Google sign-in. Please check your internet connection.';
+      return 'Network error. Please check your internet connection.';
     }
 
     if (combined.contains('sign_in_canceled') ||
@@ -201,7 +203,7 @@ class FirebaseAuthService {
     }
 
     if (combined.contains('12500')) {
-      return 'Google Sign-In failed due to OAuth configuration. Verify SHA fingerprints and Firebase Auth Google provider.';
+      return 'OAuth configuration error. Verify SHA fingerprints in Firebase Console.';
     }
 
     if (combined.contains('12501')) {
@@ -209,48 +211,41 @@ class FirebaseAuthService {
     }
 
     if (combined.contains('12502')) {
-      return 'Google sign-in is already in progress. Please wait and try again.';
+      return 'Google sign-in is in progress. Please wait.';
     }
 
-    return 'Google Sign-In failed. Platform error: code=${e.code}, message=${e.message}, details=${e.details}';
+    return 'Google Sign-In failed. Error: ${e.message}';
   }
 
   String _mapFirebaseError(String code, String? message) {
     switch (code) {
-      // Email/password
       case 'user-not-found':
         return 'No account found with this email.';
       case 'wrong-password':
-        return 'Incorrect password. Please try again.';
+        return 'Incorrect password.';
       case 'invalid-credential':
         return 'Invalid email or password.';
       case 'email-already-in-use':
-        return 'This email is already registered. Try signing in.';
+        return 'This email is already registered.';
       case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
+        return 'Password must be at least 6 characters.';
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'user-disabled':
         return 'This account has been disabled.';
       case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
+        return 'Too many attempts. Try again later.';
       case 'network-request-failed':
-        return 'Network error. Please check your connection.';
-
-      // OAuth / Google
+        return 'Network error. Check your connection.';
       case 'account-exists-with-different-credential':
-        return 'This email is already linked to another sign-in method. Sign in with that method first.';
+        return 'This email uses a different sign-in method.';
       case 'operation-not-allowed':
-        return 'Google sign-in is not enabled in Firebase Authentication.';
-
-      // Web popup-specific (Firebase Auth Web)
+        return 'Google Sign-In is not enabled. Contact support.';
       case 'popup-closed-by-user':
-        return 'Google sign-in was cancelled.';
       case 'cancelled-popup-request':
         return 'Google sign-in was cancelled.';
       case 'popup-blocked':
-        return 'Popup was blocked by the browser. Please allow popups and try again.';
-
+        return 'Popup blocked. Allow popups and try again.';
       default:
         return message ?? 'Authentication failed. Please try again.';
     }

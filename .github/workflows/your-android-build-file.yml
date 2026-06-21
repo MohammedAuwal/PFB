@@ -92,7 +92,7 @@ jobs:
             -o "$OUTPUT"
 
           if [ ! -f "$OUTPUT" ]; then
-            echo " Icon download failed!"
+            echo "❌ Icon download failed!"
             exit 1
           fi
 
@@ -162,18 +162,25 @@ jobs:
 
       # ================================================================
       # STEP 11: Create key.properties
+      # ✅ FIX: storeFile is relative to android/app/ (where build.gradle is)
+      #         So we only need the filename — NOT app/upload-keystore.jks
       # ================================================================
       - name: Create key.properties
         run: |
           set -euo pipefail
+
           cat > android/key.properties << EOF
-          storeFile=app/upload-keystore.jks
+          storeFile=upload-keystore.jks
           storePassword=${{ secrets.KEY_STORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
+
           echo "✅ key.properties created"
+          echo "--- Contents ---"
           cat android/key.properties
+          echo "--- Keystore file check ---"
+          ls -la android/app/upload-keystore.jks && echo "✅ Keystore file exists!"
 
       # ================================================================
       # STEP 12: Build Release APK
@@ -289,7 +296,6 @@ jobs:
           prerelease: false
           make_latest: true
         env:
-          # ── Use GITHUB_TOKEN — permissions: contents: write grants access ──
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ================================================================

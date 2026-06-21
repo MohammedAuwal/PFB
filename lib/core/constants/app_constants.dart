@@ -1,9 +1,10 @@
 class AppConstants {
-  static const String appName = "IsmailTex";
+  static const String appName = "Phlakes Fabrics";
 
   static const List<String> superAdminUids = [
     "kA0bqS3qlNPWXjFQ3v9HkK4cTZl2",
-    "0hwpr48kykSGUZRj1vIBEfGAcV43",
+    //mohammedauwalnassra@gmai.com
+    "zeFovG6ctXWTNTCwiH68RXTv8NJ2",
   ];
 
   static const String primarySuperAdminUid = "DfbaXxItLIMFkY48XF2jBF1qjLC3";

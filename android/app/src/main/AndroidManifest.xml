@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- ✅ REQUIRED for Android 11+ Google Sign-In -->
+  
     <queries>
         <package android:name="com.google.android.gms" />
         <package android:name="com.google.android.gsf" />
@@ -41,6 +41,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ✅ ADD THIS for Google Sign-In -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"

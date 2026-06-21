@@ -161,21 +161,20 @@ jobs:
 
           echo "✅ Keystore and all passwords verified!"
 
-      # ================================================================
-      # STEP 11: Create key.properties
-      # ================================================================
-      - name: Create key.properties
-        run: |
-          set -euo pipefail
-          cat > android/key.properties << EOF
-          storeFile=upload-keystore.jks
-          storePassword=${{ secrets.KEY_STORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
-          echo "✅ key.properties created"
-
-      # ================================================================
+     # ================================================================
+# STEP 11: Create key.properties
+# ================================================================
+- name: Create key.properties
+  run: |
+    set -euo pipefail
+    cat > android/key.properties << EOF
+    storeFile=app/upload-keystore.jks
+    storePassword=${{ secrets.KEY_STORE_PASSWORD }}
+    keyAlias=${{ secrets.KEY_ALIAS }}
+    keyPassword=${{ secrets.KEY_PASSWORD }}
+    EOF
+    echo "✅ key.properties created"
+    cat android/key.properties    # ================================================================
       # STEP 12: Build Release APK
       # ================================================================
       - name: Build Release APK

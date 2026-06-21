@@ -1,5 +1,4 @@
 # .github/workflows/android_build.yml
-
 name: Android Build & Release (Flutter APK)
 
 on:
@@ -13,8 +12,8 @@ on:
 # ── Grant GITHUB_TOKEN the permissions it needs ──────────────────────────────
 permissions:
   contents: write   # ← required to create releases and upload assets
-  actions:  read
-  checks:   read
+  actions: read
+  checks: read
 
 jobs:
   build:
@@ -93,7 +92,7 @@ jobs:
             -o "$OUTPUT"
 
           if [ ! -f "$OUTPUT" ]; then
-            echo "❌ Icon download failed!"
+            echo " Icon download failed!"
             exit 1
           fi
 
@@ -150,31 +149,33 @@ jobs:
         run: |
           set -euo pipefail
           keytool -list \
-            -keystore  "$KEYSTORE_PATH" \
+            -keystore "$KEYSTORE_PATH" \
             -storepass "${{ secrets.KEY_STORE_PASSWORD }}" > /dev/null
 
           keytool -list -v \
-            -keystore  "$KEYSTORE_PATH" \
-            -alias     "${{ secrets.KEY_ALIAS }}" \
+            -keystore "$KEYSTORE_PATH" \
+            -alias "${{ secrets.KEY_ALIAS }}" \
             -storepass "${{ secrets.KEY_STORE_PASSWORD }}" \
-            -keypass   "${{ secrets.KEY_PASSWORD }}" > /dev/null
+            -keypass "${{ secrets.KEY_PASSWORD }}" > /dev/null
 
           echo "✅ Keystore and all passwords verified!"
 
-     # ================================================================
-# STEP 11: Create key.properties
-# ================================================================
-- name: Create key.properties
-  run: |
-    set -euo pipefail
-    cat > android/key.properties << EOF
-    storeFile=app/upload-keystore.jks
-    storePassword=${{ secrets.KEY_STORE_PASSWORD }}
-    keyAlias=${{ secrets.KEY_ALIAS }}
-    keyPassword=${{ secrets.KEY_PASSWORD }}
-    EOF
-    echo "✅ key.properties created"
-    cat android/key.properties    # ================================================================
+      # ================================================================
+      # STEP 11: Create key.properties
+      # ================================================================
+      - name: Create key.properties
+        run: |
+          set -euo pipefail
+          cat > android/key.properties << EOF
+          storeFile=app/upload-keystore.jks
+          storePassword=${{ secrets.KEY_STORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+          echo "✅ key.properties created"
+          cat android/key.properties
+
+      # ================================================================
       # STEP 12: Build Release APK
       # ================================================================
       - name: Build Release APK
@@ -212,10 +213,10 @@ jobs:
              "build/app/outputs/flutter-apk/${APK_NAME}"
 
           # Export to env for later steps
-          echo "APK_NAME=${APK_NAME}"             >> "$GITHUB_ENV"
-          echo "APP_VERSION=${VERSION}"           >> "$GITHUB_ENV"
+          echo "APK_NAME=${APK_NAME}" >> "$GITHUB_ENV"
+          echo "APP_VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "APP_VERSION_SAFE=${VERSION_SAFE}" >> "$GITHUB_ENV"
-          echo "BUILD_TIMESTAMP=${TIMESTAMP}"     >> "$GITHUB_ENV"
+          echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> "$GITHUB_ENV"
 
           echo "✅ APK renamed to: ${APK_NAME}"
 
@@ -226,9 +227,9 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name:              phlakes-fabrics-apk-${{ env.BUILD_TIMESTAMP }}
-          path:              build/app/outputs/flutter-apk/${{ env.APK_NAME }}
-          retention-days:    30
+          name: phlakes-fabrics-apk-${{ env.BUILD_TIMESTAMP }}
+          path: build/app/outputs/flutter-apk/${{ env.APK_NAME }}
+          retention-days: 30
           if-no-files-found: error
 
       # ================================================================
@@ -251,8 +252,8 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name:    ${{ env.RELEASE_TAG }}
-          name:        "Phlakes Fabrics ${{ env.RELEASE_TAG }}"
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: "Phlakes Fabrics ${{ env.RELEASE_TAG }}"
           body: |
             ## 🟡 Phlakes Fabrics — Release ${{ env.RELEASE_TAG }}
 
@@ -283,9 +284,9 @@ jobs:
             ---
 
             > Built automatically on push to `main`
-          files:       build/app/outputs/flutter-apk/${{ env.APK_NAME }}
-          draft:       false
-          prerelease:  false
+          files: build/app/outputs/flutter-apk/${{ env.APK_NAME }}
+          draft: false
+          prerelease: false
           make_latest: true
         env:
           # ── Use GITHUB_TOKEN — permissions: contents: write grants access ──

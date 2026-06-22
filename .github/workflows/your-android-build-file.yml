@@ -1,4 +1,3 @@
-# .github/workflows/android_build.yml
 name: Android Build & Release (Flutter APK)
 on:
   push:
@@ -28,7 +27,7 @@ jobs:
         run: |
           npm install -g firebase-tools
           firebase deploy --only firestore:indexes --token "${{ secrets.FIREBASE_TOKEN }}"
-        echo "✅ Firestore indexes deployed successfully"
+          echo "✅ Firestore indexes deployed successfully"
       # ================================================================
       # STEP 2: Set up Java 17
       # ================================================================
@@ -148,8 +147,6 @@ jobs:
           echo "✅ Keystore and all passwords verified!"
       # ================================================================
       # STEP 12: Create key.properties
-      # ✅ FIX: storeFile is relative to android/app/ (where build.gradle is)
-      #         So we only need the filename — NOT app/upload-keystore.jks
       # ================================================================
       - name: Create key.properties
         run: |
@@ -188,9 +185,8 @@ jobs:
             | sed 's/version: //' \
             | tr -d '[:space:]')
           # Sanitize version — replace + with - for tag safety
-          # e.g. "1.0.0+4" → "1.0.0-4"
           VERSION_SAFE=$(echo "$VERSION" | tr '+' '-')
-          # Build timestamp e.g. "20250115-1430"
+          # Build timestamp
           TIMESTAMP=$(date -u +'%Y%m%d-%H%M')
           APK_NAME="phlakes-fabrics-v${VERSION_SAFE}-${TIMESTAMP}.apk"
           mv build/app/outputs/flutter-apk/app-release.apk \
@@ -203,7 +199,6 @@ jobs:
           echo "✅ APK renamed to: ${APK_NAME}"
       # ================================================================
       # STEP 15: Upload APK as workflow artifact
-      #          Available on every run including PRs
       # ================================================================
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -214,7 +209,6 @@ jobs:
           if-no-files-found: error
       # ================================================================
       # STEP 16: Generate release tag
-      #          Only on push to main — not on pull_request
       # ================================================================
       - name: Generate release tag
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -225,7 +219,6 @@ jobs:
           echo "✅ Release tag: ${TAG}"
       # ================================================================
       # STEP 17: Create GitHub Release
-      #          Only on push to main — not on pull_request
       # ================================================================
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -276,10 +269,10 @@ jobs:
           echo "  APK Name   : ${{ env.APK_NAME }}"
           echo "  Version    : ${{ env.APP_VERSION }}"
           echo "  Timestamp  : ${{ env.BUILD_TIMESTAMP }}"
-          echo "  Event      : github.event_name"
-          echo "  Branch     : github.ref_name"
-          echo "  Commit     : github.sha"
-          if [ "github.event_name" = "push" ]; then
-            echo "  Release    : https://github.com/github.repository/releases/tag/${{ env.RELEASE_TAG }}"
+          echo "  Event      : ${{ github.event_name }}"
+          echo "  Branch     : ${{ github.ref_name }}"
+          echo "  Commit     : ${{ github.sha }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "  Release    : https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_TAG }}"
           fi
           echo "=============================================="

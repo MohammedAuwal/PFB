@@ -1,5 +1,5 @@
 name: pfb
-description: ismailTex App
+description: PHLAKES FABRICS
 publish_to: "none"
 
 version: 1.0.0+1
@@ -25,8 +25,18 @@ dependencies:
   url_launcher: ^6.3.1
   permission_handler: ^11.3.1
   flutter_map: ^7.0.2
+  cached_network_image: ^3.4.1
   latlong2: ^0.9.1
   geolocator: ^12.0.0
+  # Save receipt as image to device gallery
+  image_gallery_saver: ^2.0.3
+
+  # Share receipt via system share sheet
+  share_plus: ^7.2.2
+
+  # Generate PDF receipts (future)
+  pdf: ^3.10.8
+  printing: ^5.12.0
 
 dev_dependencies:
   flutter_test:

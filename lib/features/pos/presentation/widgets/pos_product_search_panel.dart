@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+// lib/features/pos/presentation/widgets/pos_product_search_panel.dart
 import 'package:flutter/material.dart';
 import 'package:pfb/core/theme/app_theme.dart';
 import 'package:pfb/models/product_model.dart';
@@ -18,11 +18,14 @@ class PosProductSearchPanel extends StatefulWidget {
   });
 
   @override
-  State<PosProductSearchPanel> createState() => _PosProductSearchPanelState();
+  State<PosProductSearchPanel> createState() =>
+      _PosProductSearchPanelState();
 }
 
-class _PosProductSearchPanelState extends State<PosProductSearchPanel> {
-  final TextEditingController _searchCtrl = TextEditingController();
+class _PosProductSearchPanelState
+    extends State<PosProductSearchPanel> {
+  final TextEditingController _searchCtrl =
+      TextEditingController();
   String? _selectedCategory;
 
   @override
@@ -38,7 +41,8 @@ class _PosProductSearchPanelState extends State<PosProductSearchPanel> {
   }
 
   List<ProductModel> get _displayedProducts {
-    if (_selectedCategory == null || _selectedCategory == 'All') {
+    if (_selectedCategory == null ||
+        _selectedCategory == 'All') {
       return widget.products;
     }
     return widget.products
@@ -47,7 +51,10 @@ class _PosProductSearchPanelState extends State<PosProductSearchPanel> {
   }
 
   List<String> get _categories {
-    final cats = widget.products.map((p) => p.category).toSet().toList()
+    final cats = widget.products
+        .map((p) => p.category)
+        .toSet()
+        .toList()
       ..sort();
     return ['All', ...cats];
   }
@@ -58,16 +65,18 @@ class _PosProductSearchPanelState extends State<PosProductSearchPanel> {
 
     return Column(
       children: [
-        // Search Bar
+        // ── Search Bar ────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding:
+              const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: TextField(
             controller: _searchCtrl,
             onChanged: widget.onSearchChanged,
             decoration: InputDecoration(
-              hintText: 'Search fabrics by name, category...',
-              prefixIcon:
-                  Icon(Icons.search_rounded, color: colors.textSecondary),
+              hintText:
+                  'Search fabrics by name, category...',
+              prefixIcon: Icon(Icons.search_rounded,
+                  color: colors.textSecondary),
               suffixIcon: _searchCtrl.text.isNotEmpty
                   ? IconButton(
                       icon: Icon(Icons.clear_rounded,
@@ -82,37 +91,48 @@ class _PosProductSearchPanelState extends State<PosProductSearchPanel> {
           ),
         ),
 
-        // Category Filter
+        // ── Category Filter Chips ─────────────────
         SizedBox(
           height: 40,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16),
             itemCount: _categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, __) =>
+                const SizedBox(width: 8),
             itemBuilder: (_, i) {
               final cat = _categories[i];
-              final isSelected = _selectedCategory == cat ||
-                  (_selectedCategory == null && cat == 'All');
+              final isSelected =
+                  _selectedCategory == cat ||
+                      (_selectedCategory == null &&
+                          cat == 'All');
               return GestureDetector(
-                onTap: () => setState(() => _selectedCategory = cat),
+                onTap: () => setState(
+                    () => _selectedCategory = cat),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration:
+                      const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color:
-                        isSelected ? colors.brandPrimary : colors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(999),
+                    color: isSelected
+                        ? colors.brandPrimary
+                        : colors.surfaceAlt,
+                    borderRadius:
+                        BorderRadius.circular(999),
                     border: Border.all(
-                      color:
-                          isSelected ? colors.brandPrimary : colors.border,
+                      color: isSelected
+                          ? colors.brandPrimary
+                          : colors.border,
                     ),
                   ),
                   child: Text(
                     cat,
                     style: TextStyle(
-                      color: isSelected ? Colors.black : colors.textSecondary,
+                      color: isSelected
+                          ? Colors.black
+                          : colors.textSecondary,
                       fontWeight: isSelected
                           ? FontWeight.w700
                           : FontWeight.w500,
@@ -126,11 +146,11 @@ class _PosProductSearchPanelState extends State<PosProductSearchPanel> {
         ),
         const SizedBox(height: 8),
 
-        // Products Grid
+        // ── Products Grid ─────────────────────────
         Expanded(
           child: _displayedProducts.isEmpty
               ? _buildEmptyState(colors)
-              : _buildProductGrid(colors),
+              : _buildProductGrid(),
         ),
       ],
     );
@@ -146,31 +166,37 @@ class _PosProductSearchPanelState extends State<PosProductSearchPanel> {
           const SizedBox(height: 12),
           Text(
             'No products found',
-            style: TextStyle(color: colors.textSecondary, fontSize: 15),
+            style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 15),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildProductGrid(AppThemeColors colors) {
+  Widget _buildProductGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+      padding:
+          const EdgeInsets.fromLTRB(16, 0, 16, 80),
+      gridDelegate:
+          const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 200,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         childAspectRatio: 0.75,
       ),
       itemCount: _displayedProducts.length,
-      itemBuilder: (_, i) =>
-          _PosProductCard(
-            product: _displayedProducts[i],
-            onTap: () => widget.onProductTapped(_displayedProducts[i]),
-          ),
+      itemBuilder: (_, i) => _PosProductCard(
+        product: _displayedProducts[i],
+        onTap: () =>
+            widget.onProductTapped(_displayedProducts[i]),
+      ),
     );
   }
 }
+
+// ── Product Card ───────────────────────────────────────────────────────────────
 
 class _PosProductCard extends StatelessWidget {
   final ProductModel product;
@@ -181,13 +207,21 @@ class _PosProductCard extends StatelessWidget {
     required this.onTap,
   });
 
+  bool get _isOutOfStock => product.stockQuantity <= 0;
+
+  bool get _hasValidImage {
+    final url = product.imageUrl.trim();
+    return url.isNotEmpty &&
+        (url.startsWith('http://') ||
+            url.startsWith('https://'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
-    final isOutOfStock = (product.stockQuantity) <= 0;
 
     return GestureDetector(
-      onTap: isOutOfStock ? null : onTap,
+      onTap: _isOutOfStock ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
@@ -205,7 +239,7 @@ class _PosProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
+            // ── Product Image ──────────────────────
             Expanded(
               flex: 3,
               child: ClipRRect(
@@ -214,28 +248,45 @@ class _PosProductCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    product.imageUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: product.imageUrl,
+                    // Image or placeholder
+                    _hasValidImage
+                        ? Image.network(
+                            product.imageUrl,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(
-                              color: colors.surfaceAlt,
-                              child: Icon(Icons.image_outlined,
-                                  color: colors.borderSoft),
-                            ),
-                            errorWidget: (_, __, ___) => Container(
-                              color: colors.surfaceAlt,
-                              child: Icon(Icons.broken_image_outlined,
-                                  color: colors.borderSoft),
-                            ),
+                            loadingBuilder: (context,
+                                child, progress) {
+                              if (progress == null) {
+                                return child;
+                              }
+                              return Container(
+                                color: colors.surfaceAlt,
+                                child: Center(
+                                  child:
+                                      CircularProgressIndicator(
+                                    color:
+                                        colors.brandPrimary,
+                                    strokeWidth: 2,
+                                    value: progress
+                                                .expectedTotalBytes !=
+                                            null
+                                        ? progress
+                                                .cumulativeBytesLoaded /
+                                            progress
+                                                .expectedTotalBytes!
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder:
+                                (_, __, ___) =>
+                                    _buildImageFallback(
+                                        colors),
                           )
-                        : Container(
-                            color: colors.goldTint,
-                            child: Icon(Icons.texture_rounded,
-                                color: colors.brandPrimary, size: 32),
-                          ),
+                        : _buildImageFallback(colors),
+
                     // Out of stock overlay
-                    if (isOutOfStock)
+                    if (_isOutOfStock)
                       Container(
                         color: Colors.black54,
                         alignment: Alignment.center,
@@ -249,8 +300,9 @@ class _PosProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    // Add button overlay
-                    if (!isOutOfStock)
+
+                    // Add button (available products)
+                    if (!_isOutOfStock)
                       Positioned(
                         bottom: 8,
                         right: 8,
@@ -261,8 +313,11 @@ class _PosProductCard extends StatelessWidget {
                             color: AppPalette.primary,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.add_rounded,
-                              color: Colors.black, size: 18),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Colors.black,
+                            size: 18,
+                          ),
                         ),
                       ),
                   ],
@@ -270,14 +325,16 @@ class _PosProductCard extends StatelessWidget {
               ),
             ),
 
-            // Product Info
+            // ── Product Info ───────────────────────
             Expanded(
               flex: 2,
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       product.name,
@@ -291,7 +348,8 @@ class _PosProductCard extends StatelessWidget {
                       ),
                     ),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           '₦${product.price.toStringAsFixed(0)}',
@@ -315,6 +373,19 @@ class _PosProductCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageFallback(AppThemeColors colors) {
+    return Container(
+      color: colors.goldTint,
+      child: Center(
+        child: Icon(
+          Icons.texture_rounded,
+          color: colors.brandPrimary,
+          size: 32,
         ),
       ),
     );

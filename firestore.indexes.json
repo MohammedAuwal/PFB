@@ -1,0 +1,43 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "pos_sales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cashierUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pos_sales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "branchId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pos_sales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAtDate", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pos_sales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "admin_performance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "totalRevenue", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}

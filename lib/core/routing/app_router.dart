@@ -11,19 +11,21 @@ import 'package:pfb/features/favorites/presentation/screens/favorites_screen.dar
 import 'package:pfb/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:pfb/features/orders/presentation/screens/order_screen.dart';
 import 'package:pfb/features/pos/data/models/pos_sale_model.dart';
+import 'package:pfb/features/pos/data/models/receipt_model.dart';
+import 'package:pfb/features/pos/data/repositories/pos_repository.dart';
 import 'package:pfb/features/pos/presentation/screens/pos_dashboard_screen.dart';
 import 'package:pfb/features/pos/presentation/screens/pos_receipt_screen.dart';
-import 'package:pfb/features/pos/data/repositories/pos_repository.dart';
 import 'package:pfb/features/products/presentation/screens/product_list_screen.dart';
 import 'package:pfb/features/profile/presentation/screens/profile_screen.dart';
 import 'package:pfb/features/shell/presentation/screens/main_shell_screen.dart';
 import 'package:pfb/features/splash/presentation/screens/splash_screen.dart';
 
 class AppRouter {
-  static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+  static Route<dynamic> onGenerateRoute(
+      RouteSettings settings) {
     switch (settings.name) {
 
-      // ── Auth ─────────────────────────────────────────────────────────────
+      // ── Auth ───────────────────────────────────────────────────────────────
       case RouteNames.splash:
         return _route(const SplashScreen());
 
@@ -39,7 +41,7 @@ class AppRouter {
       case RouteNames.signup:
         return _route(const SignupScreen());
 
-      // ── Customer Shell ────────────────────────────────────────────────────
+      // ── Customer Shell ─────────────────────────────────────────────────────
       case RouteNames.mainShell:
         return _route(const MainShellScreen());
 
@@ -61,7 +63,14 @@ class AppRouter {
       case RouteNames.notifications:
         return _route(const NotificationsScreen());
 
-      // ── Admin ─────────────────────────────────────────────────────────────
+      // ── Redirect helpers (preserve existing behavior) ──────────────────────
+      case RouteNames.redirectCart:
+        return _route(const CartScreen());
+
+      case RouteNames.redirectProfile:
+        return _route(const ProfileScreen());
+
+      // ── Admin ──────────────────────────────────────────────────────────────
       case RouteNames.admin:
         return _route(const AdminDashboardScreen());
 
@@ -71,17 +80,14 @@ class AppRouter {
       case RouteNames.adminOrders:
         return _route(AdminOrdersScreen());
 
-      // ── POS Terminal ──────────────────────────────────────────────────────
+      // ── POS Terminal ───────────────────────────────────────────────────────
       case RouteNames.posDashboard:
         return _route(const PosDashboardScreen());
 
-      // ── POS Receipt ───────────────────────────────────────────────────────
-      // Arguments: PosSaleModel passed directly for immediate post-sale display
-      // OR a receiptId String for loading from Firestore
       case RouteNames.posReceipt:
         final args = settings.arguments;
 
-        // Case 1: Sale model passed directly (post-checkout flow)
+        // Case 1: PosSaleModel passed directly
         if (args is PosSaleModel) {
           return _route(
             PosReceiptScreen(
@@ -91,14 +97,14 @@ class AppRouter {
           );
         }
 
-        // Case 2: Receipt ID string (deep link / reprint flow)
+        // Case 2: Receipt ID string — load from Firestore
         if (args is String && args.isNotEmpty) {
           return _route(
             _PosReceiptLoaderScreen(receiptId: args),
           );
         }
 
-        // Case 3: Map with sale key (flexible passing)
+        // Case 3: Map with sale or receiptId
         if (args is Map<String, dynamic>) {
           final sale = args['sale'] as PosSaleModel?;
           final receiptId =
@@ -113,7 +119,8 @@ class AppRouter {
             );
           }
 
-          if (receiptId != null && receiptId.isNotEmpty) {
+          if (receiptId != null &&
+              receiptId.isNotEmpty) {
             return _route(
               _PosReceiptLoaderScreen(
                   receiptId: receiptId),
@@ -121,30 +128,28 @@ class AppRouter {
           }
         }
 
-        // Fallback — bad arguments
-        return _route(
-          const _PosReceiptErrorScreen(),
-        );
+        // Fallback
+        return _route(const _PosReceiptErrorScreen());
 
       // ── 404 ───────────────────────────────────────────────────────────────
       default:
         return _route(
           const Scaffold(
             body: Center(
-              child: Text('Page not found'),
-            ),
+                child: Text('Page not found')),
           ),
         );
     }
   }
 
-  // ── Route Builder ─────────────────────────────────────────────────────────
+  // ── Route Builder ──────────────────────────────────────────────────────────
 
   static MaterialPageRoute<T> _route<T>(Widget child) {
-    return MaterialPageRoute<T>(builder: (_) => child);
+    return MaterialPageRoute<T>(
+        builder: (_) => child);
   }
 
-  // ── Navigation Helpers ────────────────────────────────────────────────────
+  // ── Navigation Helpers ─────────────────────────────────────────────────────
 
   static Future<void> clearAndGo(
     BuildContext context,
@@ -163,15 +168,12 @@ class AppRouter {
     });
   }
 
-  /// Navigate to POS dashboard — admin guard should be applied
-  /// before calling this from UI.
-  static Future<void> goToPOS(BuildContext context) {
-    return Navigator.of(context).pushNamed(
-      RouteNames.posDashboard,
-    );
+  static Future<void> goToPOS(
+      BuildContext context) {
+    return Navigator.of(context)
+        .pushNamed(RouteNames.posDashboard);
   }
 
-  /// Navigate to receipt screen with a completed sale model.
   static Future<void> goToReceipt(
     BuildContext context,
     PosSaleModel sale,
@@ -182,7 +184,6 @@ class AppRouter {
     );
   }
 
-  /// Navigate to receipt by ID — for reprinting.
   static Future<void> goToReceiptById(
     BuildContext context,
     String receiptId,
@@ -193,23 +194,20 @@ class AppRouter {
     );
   }
 
-  /// Replace current route with POS dashboard.
-  static Future<void> replaceWithPOS(BuildContext context) {
-    return Navigator.of(context).pushReplacementNamed(
-      RouteNames.posDashboard,
-    );
+  static Future<void> replaceWithPOS(
+      BuildContext context) {
+    return Navigator.of(context)
+        .pushReplacementNamed(RouteNames.posDashboard);
   }
 }
 
 // ── POS Receipt Loader ─────────────────────────────────────────────────────────
-// Loads a sale from Firestore by receipt ID then shows PosReceiptScreen.
 
 class _PosReceiptLoaderScreen extends StatefulWidget {
   final String receiptId;
 
-  const _PosReceiptLoaderScreen({
-    required this.receiptId,
-  });
+  const _PosReceiptLoaderScreen(
+      {required this.receiptId});
 
   @override
   State<_PosReceiptLoaderScreen> createState() =>
@@ -235,16 +233,13 @@ class _PosReceiptLoaderScreenState
     if (receipt == null) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => const _PosReceiptErrorScreen(),
+          builder: (_) =>
+              const _PosReceiptErrorScreen(),
         ),
       );
       return;
     }
 
-    // Build a minimal PosSaleModel from the receipt for display
-    // The PosReceiptScreen only needs the sale to call
-    // ReceiptModel.fromSale() — we pass the receipt data through
-    // a thin adapter here.
     final sale = _receiptToSale(receipt);
 
     Navigator.of(context).pushReplacement(
@@ -257,9 +252,7 @@ class _PosReceiptLoaderScreenState
     );
   }
 
-  PosSaleModel _receiptToSale(dynamic receipt) {
-    // receipt is ReceiptModel — map back to PosSaleModel for display
-    // All display fields are available on ReceiptModel
+  PosSaleModel _receiptToSale(ReceiptModel receipt) {
     return PosSaleModel(
       id: receipt.saleId,
       receiptId: receipt.receiptId,
@@ -290,13 +283,12 @@ class _PosReceiptLoaderScreenState
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(
-        child: CircularProgressIndicator(),
-      ),
+          child: CircularProgressIndicator()),
     );
   }
 }
 
-// ── POS Receipt Error Screen ───────────────────────────────────────────────────
+// ── POS Receipt Error ──────────────────────────────────────────────────────────
 
 class _PosReceiptErrorScreen extends StatelessWidget {
   const _PosReceiptErrorScreen();

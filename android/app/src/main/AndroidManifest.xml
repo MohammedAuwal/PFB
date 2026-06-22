@@ -7,7 +7,15 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-  
+    <!-- Required for saving to gallery on Android 9 (API 28) and below -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+
+    <!-- Required for reading media on Android 13 (API 33)+ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
     <queries>
         <package android:name="com.google.android.gms" />
         <package android:name="com.google.android.gsf" />
@@ -18,13 +26,13 @@
         android:name="${applicationName}"
         android:icon="@drawable/ic_launcher_placeholder">
 
-        <!-- ✅ REQUIRED for Google Play Services -->
+        <!-- Required for Google Play Services -->
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
 
         <activity
-            android:name="com.pfb.app.MainActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
@@ -42,11 +50,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ ADD THIS for Google Sign-In -->
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
-
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="mix_high_importance_channel" />
@@ -54,5 +57,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
 </manifest>

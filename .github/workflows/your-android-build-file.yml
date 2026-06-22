@@ -1,4 +1,5 @@
 name: Android Build & Release (Flutter APK)
+
 on:
   push:
     branches:
@@ -6,19 +7,22 @@ on:
   pull_request:
     branches:
       - main
-# ── Grant GITHUB_TOKEN the permissions it needs ──────────────────────────────
+
 permissions:
-  contents: write   # ← required to create releases and upload assets
+  contents: write
   actions: read
   checks: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       KEYSTORE_PATH: android/app/upload-keystore.jks
+
     steps:
       - uses: actions/checkout@v4
+
       # ================================================================
       # STEP 1: Deploy Firestore Indexes
       # ================================================================
@@ -28,6 +32,7 @@ jobs:
           npm install -g firebase-tools
           firebase deploy --only firestore:indexes --token "${{ secrets.FIREBASE_TOKEN }}"
           echo "✅ Firestore indexes deployed successfully"
+
       # ================================================================
       # STEP 2: Set up Java 17
       # ================================================================
@@ -36,6 +41,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
       # ================================================================
       # STEP 3: Set up Flutter
       # ================================================================
@@ -44,6 +50,7 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+
       # ================================================================
       # STEP 4: Clean old artifacts
       # ================================================================
@@ -52,6 +59,7 @@ jobs:
           set -euo pipefail
           rm -rf build/ .dart_tool/ android/.gradle/ android/app/build/ || true
           echo "✅ Clean complete"
+
       # ================================================================
       # STEP 5: Setup asset directories
       # ================================================================
@@ -74,6 +82,7 @@ jobs:
           EOF
           fi
           echo "✅ Asset directories ready"
+
       # ================================================================
       # STEP 6: Download icon assets from Google Drive
       # ================================================================
@@ -91,6 +100,7 @@ jobs:
           fi
           cp "$OUTPUT" assets/icon_foreground.png
           echo "✅ Icon downloaded successfully"
+
       # ================================================================
       # STEP 7: Flutter pub get
       # ================================================================
@@ -98,6 +108,7 @@ jobs:
         run: |
           flutter pub get
           echo "✅ Flutter dependencies installed"
+
       # ================================================================
       # STEP 8: Generate launcher icons
       # ================================================================
@@ -106,6 +117,7 @@ jobs:
           set -euo pipefail
           dart run flutter_launcher_icons
           echo "✅ All launcher icons generated"
+
       # ================================================================
       # STEP 9: Verify Firebase config
       # ================================================================
@@ -116,6 +128,7 @@ jobs:
             exit 1
           fi
           echo "✅ google-services.json found"
+
       # ================================================================
       # STEP 10: Decode Keystore
       # ================================================================
@@ -130,6 +143,7 @@ jobs:
           rm -f "$KEYSTORE_PATH"
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_PATH"
           echo "✅ Keystore decoded to $KEYSTORE_PATH"
+
       # ================================================================
       # STEP 11: Verify Keystore & Password Integrity
       # ================================================================
@@ -145,6 +159,7 @@ jobs:
             -storepass "${{ secrets.KEY_STORE_PASSWORD }}" \
             -keypass "${{ secrets.KEY_PASSWORD }}" > /dev/null
           echo "✅ Keystore and all passwords verified!"
+
       # ================================================================
       # STEP 12: Create key.properties
       # ================================================================
@@ -162,6 +177,7 @@ jobs:
           cat android/key.properties
           echo "--- Keystore file check ---"
           ls -la android/app/upload-keystore.jks && echo "✅ Keystore file exists!"
+
       # ================================================================
       # STEP 13: Build Release APK
       # ================================================================
@@ -174,29 +190,27 @@ jobs:
             --split-debug-info=build/debug-info \
             --no-tree-shake-icons
           echo "✅ Release APK built successfully"
+
       # ================================================================
       # STEP 14: Rename APK with version + timestamp
       # ================================================================
       - name: Rename APK
         run: |
           set -euo pipefail
-          # Extract version from pubspec.yaml e.g. "1.0.0+4"
           VERSION=$(grep '^version:' pubspec.yaml \
             | sed 's/version: //' \
             | tr -d '[:space:]')
-          # Sanitize version — replace + with - for tag safety
           VERSION_SAFE=$(echo "$VERSION" | tr '+' '-')
-          # Build timestamp
           TIMESTAMP=$(date -u +'%Y%m%d-%H%M')
           APK_NAME="phlakes-fabrics-v${VERSION_SAFE}-${TIMESTAMP}.apk"
           mv build/app/outputs/flutter-apk/app-release.apk \
              "build/app/outputs/flutter-apk/${APK_NAME}"
-          # Export to env for later steps
           echo "APK_NAME=${APK_NAME}" >> "$GITHUB_ENV"
           echo "APP_VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "APP_VERSION_SAFE=${VERSION_SAFE}" >> "$GITHUB_ENV"
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> "$GITHUB_ENV"
           echo "✅ APK renamed to: ${APK_NAME}"
+
       # ================================================================
       # STEP 15: Upload APK as workflow artifact
       # ================================================================
@@ -207,6 +221,7 @@ jobs:
           path: build/app/outputs/flutter-apk/${{ env.APK_NAME }}
           retention-days: 30
           if-no-files-found: error
+
       # ================================================================
       # STEP 16: Generate release tag
       # ================================================================
@@ -217,6 +232,7 @@ jobs:
           TAG="v${{ env.APP_VERSION_SAFE }}-${{ env.BUILD_TIMESTAMP }}"
           echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
           echo "✅ Release tag: ${TAG}"
+
       # ================================================================
       # STEP 17: Create GitHub Release
       # ================================================================
@@ -241,13 +257,13 @@ jobs:
             ---
             ### ✅ Build Info
 
-| Property | Value |
-| :--- | :--- |
-| Flutter channel | `stable` |
-| Java version | `17` |
-| Signed | `release keystore ✅` |
-| Obfuscated | `yes` |
-| Build system | `GitHub Actions` |
+            | Property | Value |
+            | :--- | :--- |
+            | Flutter channel | `stable` |
+            | Java version | `17` |
+            | Signed | `release keystore ✅` |
+            | Obfuscated | `yes` |
+            | Build system | `GitHub Actions` |
 
             ---
             > Built automatically on push to `main`
@@ -257,6 +273,7 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # ================================================================
       # STEP 18: Print build summary
       # ================================================================

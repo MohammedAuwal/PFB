@@ -20,6 +20,7 @@ import 'package:pfb/features/admin/presentation/screens/manage_products_screen.d
 import 'package:pfb/features/admin/presentation/screens/payment_settings_screen.dart';
 import 'package:pfb/features/admin/presentation/screens/super_admin_analytics_screen.dart';
 import 'package:pfb/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:pfb/features/pos/presentation/screens/pos_dashboard_screen.dart';
 import 'package:pfb/features/products/presentation/screens/product_detail_screen.dart';
 import 'package:pfb/models/app_notification_model.dart';
 import 'package:pfb/models/product_model.dart';
@@ -27,6 +28,76 @@ import 'package:pfb/services/admin_preview_scope.dart';
 import 'package:pfb/services/firebase_auth_service.dart';
 import 'package:pfb/services/firebase_service.dart';
 import 'package:pfb/services/notification_navigation_service.dart';
+
+// ── Admin Role Enum ────────────────────────────────────────────────────────────
+
+enum AdminRole {
+  cashier,
+  storeManager,
+  admin,
+  superAdmin;
+
+  String get label {
+    switch (this) {
+      case AdminRole.cashier:
+        return 'Cashier';
+      case AdminRole.storeManager:
+        return 'Store Manager';
+      case AdminRole.admin:
+        return 'Admin';
+      case AdminRole.superAdmin:
+        return 'Super Admin';
+    }
+  }
+
+  String get firestoreValue {
+    switch (this) {
+      case AdminRole.cashier:
+        return 'cashier';
+      case AdminRole.storeManager:
+        return 'store_manager';
+      case AdminRole.admin:
+        return 'admin';
+      case AdminRole.superAdmin:
+        return 'super_admin';
+    }
+  }
+
+  static AdminRole fromString(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'cashier':
+        return AdminRole.cashier;
+      case 'store_manager':
+        return AdminRole.storeManager;
+      case 'super_admin':
+        return AdminRole.superAdmin;
+      default:
+        return AdminRole.admin;
+    }
+  }
+
+  /// Whether this role can access POS terminal
+  bool get canAccessPos =>
+      this == AdminRole.cashier ||
+      this == AdminRole.storeManager ||
+      this == AdminRole.admin ||
+      this == AdminRole.superAdmin;
+
+  /// Whether this role can manage products
+  bool get canManageProducts =>
+      this == AdminRole.storeManager ||
+      this == AdminRole.admin ||
+      this == AdminRole.superAdmin;
+
+  /// Whether this role can view analytics
+  bool get canViewAnalytics =>
+      this == AdminRole.storeManager ||
+      this == AdminRole.admin ||
+      this == AdminRole.superAdmin;
+
+  /// Whether this role can manage admins
+  bool get canManageAdmins => this == AdminRole.superAdmin;
+}
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -38,13 +109,16 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState
     extends State<AdminDashboardScreen> {
-  final _authService     = FirebaseAuthService();
+  final _authService = FirebaseAuthService();
   final _firebaseService = FirebaseService();
-  final _adminNameCtrl   = TextEditingController();
-  final _adminEmailCtrl  = TextEditingController();
+  final _adminNameCtrl = TextEditingController();
+  final _adminEmailCtrl = TextEditingController();
+
+  // ── Role assignment state ──────────────────────────────────────
+  AdminRole _selectedRoleForNewAdmin = AdminRole.admin;
 
   bool _addingAdmin = false;
-  bool _loggingOut  = false;
+  bool _loggingOut = false;
 
   bool get _isSuperAdmin => AppConstants.isSuperAdminUid(
         FirebaseAuth.instance.currentUser?.uid,
@@ -57,10 +131,10 @@ class _AdminDashboardScreenState
             value.startsWith('https://'));
   }
 
-  // ── Add Admin ────────────────────────────────────────────────────
+  // ── Add Admin with Role ──────────────────────────────────────────
 
   Future<void> _addAdmin() async {
-    final name  = _adminNameCtrl.text.trim();
+    final name = _adminNameCtrl.text.trim();
     final email = _adminEmailCtrl.text.trim().toLowerCase();
 
     if (name.isEmpty || email.isEmpty) {
@@ -95,6 +169,7 @@ class _AdminDashboardScreenState
 
       final realUid = userQuery.docs.first.id;
 
+      // ── Write admin doc with full role assignment ──────────────
       await _firebaseService.addAdmin(
         uid: realUid,
         email: email,
@@ -103,14 +178,37 @@ class _AdminDashboardScreenState
       await _firebaseService.firestore
           .collection(AppConstants.adminsCollection)
           .doc(realUid)
-          .set({'displayName': name}, SetOptions(merge: true));
+          .set(
+        {
+          'displayName': name,
+          'role': _selectedRoleForNewAdmin.firestoreValue,
+          'roleName': _selectedRoleForNewAdmin.label,
+          'canAccessPos': _selectedRoleForNewAdmin.canAccessPos,
+          'canManageProducts':
+              _selectedRoleForNewAdmin.canManageProducts,
+          'canViewAnalytics':
+              _selectedRoleForNewAdmin.canViewAnalytics,
+          'assignedBy':
+              _firebaseService.currentUser?.uid ?? '',
+          'assignedByEmail':
+              _firebaseService.currentUser?.email ?? '',
+          'roleAssignedAt': DateTime.now().toIso8601String(),
+        },
+        SetOptions(merge: true),
+      );
 
       _adminNameCtrl.clear();
       _adminEmailCtrl.clear();
+      setState(() =>
+          _selectedRoleForNewAdmin = AdminRole.admin);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Success! $name is now an Admin.')),
+        SnackBar(
+          content: Text(
+            'Success! $name is now a ${_selectedRoleForNewAdmin.label}.',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -119,6 +217,48 @@ class _AdminDashboardScreenState
       );
     } finally {
       if (mounted) setState(() => _addingAdmin = false);
+    }
+  }
+
+  // ── Update existing admin role ──────────────────────────────────
+
+  Future<void> _updateAdminRole(
+    String adminUid,
+    String adminName,
+    AdminRole newRole,
+  ) async {
+    try {
+      await _firebaseService.firestore
+          .collection(AppConstants.adminsCollection)
+          .doc(adminUid)
+          .set(
+        {
+          'role': newRole.firestoreValue,
+          'roleName': newRole.label,
+          'canAccessPos': newRole.canAccessPos,
+          'canManageProducts': newRole.canManageProducts,
+          'canViewAnalytics': newRole.canViewAnalytics,
+          'roleUpdatedBy':
+              _firebaseService.currentUser?.uid ?? '',
+          'roleUpdatedAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        SetOptions(merge: true),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$adminName role updated to ${newRole.label}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Role update failed: $e')),
+      );
     }
   }
 
@@ -147,7 +287,6 @@ class _AdminDashboardScreenState
                 ),
               ),
               content: Text(
-                // ── Brand name updated ───────────────────────────
                 'You are about to sign out of the Phlakes Fabrics admin account.',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
@@ -261,7 +400,8 @@ class _AdminDashboardScreenState
                         child: _StatCard(
                           title: 'Admins',
                           value: '${aSnap.data ?? 1}',
-                          icon: Icons.admin_panel_settings_rounded,
+                          icon:
+                              Icons.admin_panel_settings_rounded,
                           color: colors.info,
                         ),
                       ),
@@ -336,7 +476,6 @@ class _AdminDashboardScreenState
                 const SizedBox(width: 12),
                 Expanded(
                   child: _StatCard(
-                    // ── Platform badge updated ───────────────────
                     title: 'Platform',
                     value: 'PF',
                     icon: Icons.storefront_rounded,
@@ -351,12 +490,432 @@ class _AdminDashboardScreenState
     );
   }
 
+  // ── Role Selector Widget ──────────────────────────────────────────
+
+  Widget _buildRoleSelector(AppThemeColors colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Assign Role',
+          style: GoogleFonts.poppins(
+            color: colors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Role options — exclude superAdmin from assignment UI
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            AdminRole.cashier,
+            AdminRole.storeManager,
+            AdminRole.admin,
+          ].map((role) {
+            final isSelected = _selectedRoleForNewAdmin == role;
+            return GestureDetector(
+              onTap: () =>
+                  setState(() => _selectedRoleForNewAdmin = role),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colors.brandPrimary
+                      : colors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isSelected
+                        ? colors.brandPrimary
+                        : colors.border,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _roleIcon(role),
+                      size: 14,
+                      color: isSelected
+                          ? Colors.black
+                          : colors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      role.label,
+                      style: GoogleFonts.poppins(
+                        color: isSelected
+                            ? Colors.black
+                            : colors.textSecondary,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 8),
+        // Role description
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: colors.goldTint,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color: colors.brandPrimary.withOpacity(0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _selectedRoleForNewAdmin.label,
+                style: GoogleFonts.poppins(
+                  color: colors.brandPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _roleDescription(_selectedRoleForNewAdmin),
+                style: GoogleFonts.poppins(
+                  color: colors.textSecondary,
+                  fontSize: 11,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _roleIcon(AdminRole role) {
+    switch (role) {
+      case AdminRole.cashier:
+        return Icons.point_of_sale_rounded;
+      case AdminRole.storeManager:
+        return Icons.store_rounded;
+      case AdminRole.admin:
+        return Icons.admin_panel_settings_rounded;
+      case AdminRole.superAdmin:
+        return Icons.security_rounded;
+    }
+  }
+
+  String _roleDescription(AdminRole role) {
+    switch (role) {
+      case AdminRole.cashier:
+        return 'Can access POS terminal to process walk-in sales. Cannot manage products or view analytics.';
+      case AdminRole.storeManager:
+        return 'Can access POS terminal, manage products, categories, and view store analytics.';
+      case AdminRole.admin:
+        return 'Full admin access — POS, products, orders, deliveries, categories and analytics.';
+      case AdminRole.superAdmin:
+        return 'Complete platform control including admin management and all analytics.';
+    }
+  }
+
+  // ── Admin List with Role Badges ───────────────────────────────────
+
+  Widget _buildAdminList(AppThemeColors colors) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _firebaseService.watchAdmins(),
+      builder: (context, snapshot) {
+        final admins = snapshot.data ?? [];
+        if (admins.isEmpty) {
+          return Text(
+            'No extra admins yet',
+            style: GoogleFonts.poppins(
+              color: colors.textSecondary,
+            ),
+          );
+        }
+
+        return Column(
+          children: admins.map((admin) {
+            final uid = (admin['uid'] ?? '').toString();
+            final name = (admin['displayName'] ??
+                    admin['email'] ??
+                    '')
+                .toString();
+            final email =
+                (admin['email'] ?? '').toString();
+            final role = AdminRole.fromString(
+              admin['role']?.toString(),
+            );
+            final initial = name.isNotEmpty
+                ? name[0].toUpperCase()
+                : 'A';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.surfaceAlt,
+                borderRadius: BorderRadius.circular(14),
+                border:
+                    Border.all(color: colors.borderSoft),
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // Avatar
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: colors.brandPrimary
+                            .withOpacity(0.15),
+                        child: Text(
+                          initial,
+                          style: GoogleFonts.poppins(
+                            color: colors.brandPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Name + email
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.poppins(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              email,
+                              style: GoogleFonts.poppins(
+                                color: colors.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Role badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _roleBadgeColor(role)
+                              .withOpacity(0.12),
+                          borderRadius:
+                              BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _roleBadgeColor(role)
+                                .withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          role.label,
+                          style: GoogleFonts.poppins(
+                            color: _roleBadgeColor(role),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Permission chips
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      if (role.canAccessPos)
+                        _permissionChip(
+                          'POS',
+                          Icons.point_of_sale_rounded,
+                          colors.info,
+                          colors,
+                        ),
+                      if (role.canManageProducts)
+                        _permissionChip(
+                          'Products',
+                          Icons.texture_rounded,
+                          colors.success,
+                          colors,
+                        ),
+                      if (role.canViewAnalytics)
+                        _permissionChip(
+                          'Analytics',
+                          Icons.analytics_rounded,
+                          colors.brandPrimary,
+                          colors,
+                        ),
+                      if (role.canManageAdmins)
+                        _permissionChip(
+                          'Admins',
+                          Icons.security_rounded,
+                          colors.error,
+                          colors,
+                        ),
+                    ],
+                  ),
+
+                  // Role update dropdown (super admin only)
+                  if (_isSuperAdmin && uid.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.edit_rounded,
+                          size: 14,
+                          color: colors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Change role:',
+                          style: GoogleFonts.poppins(
+                            color: colors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            height: 36,
+                            padding:
+                                const EdgeInsets.symmetric(
+                              horizontal: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              borderRadius:
+                                  BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: colors.border),
+                            ),
+                            child:
+                                DropdownButtonHideUnderline(
+                              child:
+                                  DropdownButton<AdminRole>(
+                                value: role,
+                                isExpanded: true,
+                                dropdownColor:
+                                    colors.surfaceAlt,
+                                style: GoogleFonts.poppins(
+                                  color: colors.textPrimary,
+                                  fontSize: 12,
+                                ),
+                                iconEnabledColor:
+                                    colors.iconPrimary,
+                                items: [
+                                  AdminRole.cashier,
+                                  AdminRole.storeManager,
+                                  AdminRole.admin,
+                                ].map((r) {
+                                  return DropdownMenuItem(
+                                    value: r,
+                                    child: Text(r.label),
+                                  );
+                                }).toList(),
+                                onChanged: (newRole) {
+                                  if (newRole == null ||
+                                      newRole == role) {
+                                    return;
+                                  }
+                                  _updateAdminRole(
+                                    uid,
+                                    name,
+                                    newRole,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Color _roleBadgeColor(AdminRole role) {
+    switch (role) {
+      case AdminRole.cashier:
+        return AppPalette.info;
+      case AdminRole.storeManager:
+        return AppPalette.success;
+      case AdminRole.admin:
+        return AppPalette.primary;
+      case AdminRole.superAdmin:
+        return AppPalette.error;
+    }
+  }
+
+  Widget _permissionChip(
+    String label,
+    IconData icon,
+    Color color,
+    AppThemeColors colors,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: color,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final themeController = ThemeScope.of(context);
-    final colors          = AppTheme.colorsOf(context);
+    final colors = AppTheme.colorsOf(context);
 
     return Scaffold(
       backgroundColor: colors.scaffold,
@@ -364,7 +923,6 @@ class _AdminDashboardScreenState
         elevation: 0,
         title: Row(
           children: [
-            // ── Phlakes Fabrics Brand Badge ──────────────────────
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -383,17 +941,16 @@ class _AdminDashboardScreenState
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
-                    color: colors.brandPrimary.withOpacity(0.35),
+                    color:
+                        colors.brandPrimary.withOpacity(0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Text(
-                // ── PF brand identifier ──────────────────────────
                 'PF',
                 style: GoogleFonts.cinzel(
-                  // ── Black text on gold badge ─────────────────
                   color: AppPalette.secondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -404,7 +961,8 @@ class _AdminDashboardScreenState
             const SizedBox(width: 10),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     _isSuperAdmin
@@ -418,7 +976,6 @@ class _AdminDashboardScreenState
                   ),
                   Text(
                     _isSuperAdmin
-                        // ── Brand name updated ───────────────────
                         ? 'Full platform control — Phlakes Fabrics'
                         : 'Manage your products & assigned orders',
                     style: GoogleFonts.poppins(
@@ -433,7 +990,7 @@ class _AdminDashboardScreenState
           ],
         ),
         actions: [
-          // ── Notifications ────────────────────────────────────
+          // ── Notifications ──────────────────────────────
           StreamBuilder<int>(
             stream:
                 _firebaseService.watchUnreadNotificationCount(),
@@ -444,7 +1001,8 @@ class _AdminDashboardScreenState
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen(),
+                      builder: (_) =>
+                          const NotificationsScreen(),
                     ),
                   );
                 },
@@ -460,16 +1018,17 @@ class _AdminDashboardScreenState
                         right: -4,
                         top: -4,
                         child: Container(
-                          constraints: const BoxConstraints(
+                          constraints:
+                              const BoxConstraints(
                             minWidth: 16,
                             minHeight: 16,
                           ),
-                          padding: const EdgeInsets.symmetric(
+                          padding:
+                              const EdgeInsets.symmetric(
                             horizontal: 4,
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            // ── Gold badge ───────────────────────
                             gradient: const LinearGradient(
                               colors: [
                                 AppPalette.primaryDark,
@@ -488,9 +1047,10 @@ class _AdminDashboardScreenState
                           ),
                           child: Center(
                             child: Text(
-                              count > 99 ? '99+' : '$count',
+                              count > 99
+                                  ? '99+'
+                                  : '$count',
                               style: GoogleFonts.poppins(
-                                // ── Black on gold badge ──────────
                                 color: AppPalette.secondary,
                                 fontSize: 8,
                                 fontWeight: FontWeight.w700,
@@ -504,11 +1064,11 @@ class _AdminDashboardScreenState
               );
             },
           ),
-          // ── Theme Toggle ────────────────────────────────────
+          // ── Theme Toggle ─────────────────────────────
           IconButton(
             tooltip: 'Toggle theme',
-            onPressed: () => themeController
-                .toggleDarkMode(!themeController.isDarkMode),
+            onPressed: () => themeController.toggleDarkMode(
+                !themeController.isDarkMode),
             icon: Icon(
               themeController.isDarkMode
                   ? Icons.light_mode_rounded
@@ -516,7 +1076,7 @@ class _AdminDashboardScreenState
               color: colors.iconPrimary,
             ),
           ),
-          // ── User View ───────────────────────────────────────
+          // ── User View ─────────────────────────────────
           Padding(
             padding: const EdgeInsets.only(right: 4),
             child: TextButton.icon(
@@ -536,7 +1096,7 @@ class _AdminDashboardScreenState
               ),
             ),
           ),
-          // ── Logout ──────────────────────────────────────────
+          // ── Logout ───────────────────────────────────
           IconButton(
             onPressed: _loggingOut ? null : _logout,
             icon: _loggingOut
@@ -556,25 +1116,49 @@ class _AdminDashboardScreenState
         ],
       ),
 
-      // ── FAB — Add Fabric ───────────────────────────────────────
-      floatingActionButton: FloatingActionButton.extended(
-        // ── Gold gradient FAB ──────────────────────────────────
-        backgroundColor: colors.brandPrimary,
-        // ── Black text on gold ─────────────────────────────────
-        foregroundColor: AppPalette.secondary,
-        elevation: 4,
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const AddProductScreen(),
+      // ── FAB — POS Terminal ─────────────────────────────────────
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // POS FAB
+          FloatingActionButton(
+            heroTag: 'pos_fab',
+            backgroundColor: colors.surface,
+            foregroundColor: colors.brandPrimary,
+            elevation: 4,
+            tooltip: 'Open POS Terminal',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PosDashboardScreen(),
+                ),
+              );
+            },
+            child: const Icon(Icons.point_of_sale_rounded),
+          ),
+          const SizedBox(height: 12),
+          // Add Fabric FAB
+          FloatingActionButton.extended(
+            heroTag: 'add_fabric_fab',
+            backgroundColor: colors.brandPrimary,
+            foregroundColor: AppPalette.secondary,
+            elevation: 4,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AddProductScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.add_rounded),
+            label: Text(
+              'Add Fabric',
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700),
             ),
-          );
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(
-          'Add Fabric',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
-        ),
+          ),
+        ],
       ),
 
       body: CustomScrollView(
@@ -583,8 +1167,7 @@ class _AdminDashboardScreenState
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-
-                // ── Admin Mode Banner ──────────────────────────
+                // ── Admin Mode Banner ──────────────────────
                 Container(
                   margin: const EdgeInsets.only(bottom: 18),
                   padding: const EdgeInsets.symmetric(
@@ -602,7 +1185,8 @@ class _AdminDashboardScreenState
                     ),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: colors.brandPrimary.withOpacity(0.3),
+                      color: colors.brandPrimary
+                          .withOpacity(0.3),
                     ),
                   ),
                   child: Row(
@@ -615,7 +1199,8 @@ class _AdminDashboardScreenState
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.admin_panel_settings_rounded,
+                          Icons
+                              .admin_panel_settings_rounded,
                           color: colors.brandPrimary,
                           size: 20,
                         ),
@@ -628,7 +1213,6 @@ class _AdminDashboardScreenState
                           children: [
                             Text(
                               _isSuperAdmin
-                                  // ── Brand name updated ─────────
                                   ? 'Super Admin Mode — Phlakes Fabrics'
                                   : 'Admin Mode — Phlakes Fabrics',
                               style: GoogleFonts.poppins(
@@ -655,18 +1239,97 @@ class _AdminDashboardScreenState
                   ),
                 ),
 
-                // ── Stats ────────────────────────────────────
+                // ── POS Quick Access Banner ─────────────────
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const PosDashboardScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 18),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.goldHorizontal,
+                      borderRadius:
+                          BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.brandPrimary
+                              .withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding:
+                              const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.black
+                                .withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.point_of_sale_rounded,
+                            color: Colors.black,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'POS Terminal',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.black,
+                                  fontWeight:
+                                      FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                'Process walk-in customer purchases',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.black
+                                      .withOpacity(0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.black,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Stats ─────────────────────────────────
                 _buildStatsSection(),
                 const SizedBox(height: 18),
 
-                // ── Notifications Panel ──────────────────────
+                // ── Notifications Panel ──────────────────
                 Container(
                   margin: const EdgeInsets.only(bottom: 18),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: colors.card,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: colors.borderSoft),
+                    border:
+                        Border.all(color: colors.borderSoft),
                     boxShadow: [
                       BoxShadow(
                         color: colors.brandPrimary
@@ -683,7 +1346,8 @@ class _AdminDashboardScreenState
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(7),
+                            padding:
+                                const EdgeInsets.all(7),
                             decoration: BoxDecoration(
                               color: colors.brandPrimary
                                   .withOpacity(0.12),
@@ -699,7 +1363,6 @@ class _AdminDashboardScreenState
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            // ── Brand name updated ─────────────
                             'Phlakes Fabrics Notifications',
                             style: GoogleFonts.poppins(
                               color: colors.textPrimary,
@@ -729,7 +1392,8 @@ class _AdminDashboardScreenState
                         ],
                       ),
                       const SizedBox(height: 10),
-                      StreamBuilder<List<AppNotificationModel>>(
+                      StreamBuilder<
+                          List<AppNotificationModel>>(
                         stream: _firebaseService
                             .watchAdminNotifications(),
                         builder: (context, snapshot) {
@@ -744,14 +1408,15 @@ class _AdminDashboardScreenState
                                 children: [
                                   Icon(
                                     Icons.inbox_rounded,
-                                    color: colors.textSecondary,
+                                    color:
+                                        colors.textSecondary,
                                     size: 18,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    // ── Brand updated ──────────
                                     'No Phlakes Fabrics notifications yet',
-                                    style: GoogleFonts.poppins(
+                                    style:
+                                        GoogleFonts.poppins(
                                       color:
                                           colors.textSecondary,
                                       fontSize: 12.5,
@@ -762,9 +1427,9 @@ class _AdminDashboardScreenState
                             );
                           }
 
-                          final recent =
-                              notifications.take(5).toList();
-
+                          final recent = notifications
+                              .take(5)
+                              .toList();
                           return Column(
                             children: recent.map((n) {
                               return InkWell(
@@ -790,22 +1455,26 @@ class _AdminDashboardScreenState
                                 borderRadius:
                                     BorderRadius.circular(12),
                                 child: Container(
-                                  margin: const EdgeInsets.only(
-                                      bottom: 8),
+                                  margin:
+                                      const EdgeInsets.only(
+                                          bottom: 8),
                                   padding:
-                                      const EdgeInsets.all(10),
+                                      const EdgeInsets.all(
+                                          10),
                                   decoration: BoxDecoration(
                                     color: n.isRead
                                         ? colors.surfaceAlt
                                         : colors.brandPrimary
                                             .withOpacity(0.08),
                                     borderRadius:
-                                        BorderRadius.circular(12),
+                                        BorderRadius.circular(
+                                            12),
                                     border: Border.all(
                                       color: n.isRead
                                           ? colors.borderSoft
                                           : colors.brandPrimary
-                                              .withOpacity(0.25),
+                                              .withOpacity(
+                                                  0.25),
                                     ),
                                   ),
                                   child: Row(
@@ -816,11 +1485,14 @@ class _AdminDashboardScreenState
                                           height: 8,
                                           margin:
                                               const EdgeInsets
-                                                  .only(right: 8),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                colors.brandPrimary,
-                                            shape: BoxShape.circle,
+                                                  .only(
+                                                  right: 8),
+                                          decoration:
+                                              BoxDecoration(
+                                            color: colors
+                                                .brandPrimary,
+                                            shape:
+                                                BoxShape.circle,
                                           ),
                                         ),
                                       Expanded(
@@ -835,9 +1507,12 @@ class _AdminDashboardScreenState
                                                   .poppins(
                                                 color: colors
                                                     .textPrimary,
-                                                fontWeight: n.isRead
-                                                    ? FontWeight.w500
-                                                    : FontWeight.w700,
+                                                fontWeight: n
+                                                        .isRead
+                                                    ? FontWeight
+                                                        .w500
+                                                    : FontWeight
+                                                        .w700,
                                                 fontSize: 12.5,
                                               ),
                                             ),
@@ -846,8 +1521,9 @@ class _AdminDashboardScreenState
                                             Text(
                                               n.body,
                                               maxLines: 1,
-                                              overflow: TextOverflow
-                                                  .ellipsis,
+                                              overflow:
+                                                  TextOverflow
+                                                      .ellipsis,
                                               style: GoogleFonts
                                                   .poppins(
                                                 color: colors
@@ -861,7 +1537,8 @@ class _AdminDashboardScreenState
                                       Icon(
                                         Icons
                                             .chevron_right_rounded,
-                                        color: colors.textSecondary,
+                                        color:
+                                            colors.textSecondary,
                                         size: 18,
                                       ),
                                     ],
@@ -876,15 +1553,33 @@ class _AdminDashboardScreenState
                   ),
                 ),
 
-                // ── Quick Actions Grid ───────────────────────
+                // ── Quick Actions Grid ───────────────────
                 Row(
                   children: [
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.point_of_sale_rounded,
+                        title: 'POS Terminal',
+                        subtitle: 'Walk-in sales',
+                        isHighlighted: true,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const PosDashboardScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _ActionCard(
                         icon: Icons.add_box_outlined,
                         title: 'Add Fabric',
                         subtitle: 'Upload new product',
-                        onTap: () => Navigator.of(context).push(
+                        onTap: () =>
+                            Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
                                 const AddProductScreen(),
@@ -892,24 +1587,26 @@ class _AdminDashboardScreenState
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _ActionCard(
-                        icon: Icons.inventory_2_outlined,
-                        title: 'Manage Products',
-                        subtitle: 'Edit & delete',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ManageProductsScreen(),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.inventory_2_outlined,
+                        title: 'Manage Products',
+                        subtitle: 'Edit & delete',
+                        onTap: () =>
+                            Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ManageProductsScreen(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _ActionCard(
                         icon: Icons.receipt_long_rounded,
@@ -917,24 +1614,10 @@ class _AdminDashboardScreenState
                             ? 'All Orders'
                             : 'My Orders',
                         subtitle: 'Order management',
-                        onTap: () => Navigator.of(context).push(
+                        onTap: () =>
+                            Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => AdminOrdersScreen(),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _ActionCard(
-                        icon: Icons.local_shipping_outlined,
-                        title: _isSuperAdmin
-                            ? 'All Deliveries'
-                            : 'My Deliveries',
-                        subtitle: 'Delivery tracking',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => AdminRidesScreen(),
                           ),
                         ),
                       ),
@@ -946,10 +1629,27 @@ class _AdminDashboardScreenState
                   children: [
                     Expanded(
                       child: _ActionCard(
+                        icon: Icons.local_shipping_outlined,
+                        title: _isSuperAdmin
+                            ? 'All Deliveries'
+                            : 'My Deliveries',
+                        subtitle: 'Delivery tracking',
+                        onTap: () =>
+                            Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => AdminRidesScreen(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ActionCard(
                         icon: Icons.category_outlined,
                         title: 'Categories',
                         subtitle: 'Fabric categories',
-                        onTap: () => Navigator.of(context).push(
+                        onTap: () =>
+                            Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
                                 const ManageCategoriesScreen(),
@@ -957,7 +1657,11 @@ class _AdminDashboardScreenState
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
                     Expanded(
                       child: _ActionCard(
                         icon: _isSuperAdmin
@@ -979,10 +1683,13 @@ class _AdminDashboardScreenState
                             : _switchToUserView,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    // Placeholder to keep grid balanced
+                    const Expanded(child: SizedBox()),
                   ],
                 ),
 
-                // ── Super Admin only ─────────────────────────
+                // ── Super Admin only ─────────────────────
                 if (_isSuperAdmin) ...[
                   const SizedBox(height: 12),
                   Row(
@@ -1049,13 +1756,14 @@ class _AdminDashboardScreenState
                 ],
                 const SizedBox(height: 18),
 
-                // ── Add Admin Panel (Super Admin only) ───────
+                // ── Add Admin Panel (Super Admin only) ───
                 if (_isSuperAdmin) ...[
                   _sectionCard(
                     child: Column(
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
                       children: [
+                        // Header
                         Row(
                           children: [
                             Container(
@@ -1085,16 +1793,26 @@ class _AdminDashboardScreenState
                           ],
                         ),
                         const SizedBox(height: 14),
+
+                        // Name field
                         _Field(
                           controller: _adminNameCtrl,
                           hint: 'Admin Full Name',
                         ),
                         const SizedBox(height: 12),
+
+                        // Email field
                         _Field(
                           controller: _adminEmailCtrl,
                           hint: 'Admin Email (must be a registered user)',
                         ),
                         const SizedBox(height: 14),
+
+                        // ── Role Selector ──────────────────
+                        _buildRoleSelector(colors),
+                        const SizedBox(height: 14),
+
+                        // Submit button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -1102,7 +1820,6 @@ class _AdminDashboardScreenState
                                 ? null
                                 : _addAdmin,
                             style: ElevatedButton.styleFrom(
-                              // ── Gold button, black text ────────
                               backgroundColor:
                                   colors.brandPrimary,
                               foregroundColor:
@@ -1122,18 +1839,22 @@ class _AdminDashboardScreenState
                                     child:
                                         CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: AppPalette.secondary,
+                                      color:
+                                          AppPalette.secondary,
                                     ),
                                   )
                                 : Text(
-                                    'Add Admin',
+                                    'Add ${_selectedRoleForNewAdmin.label}',
                                     style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight:
+                                          FontWeight.w700,
                                     ),
                                   ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
+
+                        // ── Current Admins ────────────────
                         Row(
                           children: [
                             Icon(
@@ -1143,7 +1864,7 @@ class _AdminDashboardScreenState
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Current Admins',
+                              'Team Members',
                               style: GoogleFonts.poppins(
                                 color: colors.textSecondary,
                                 fontWeight: FontWeight.w600,
@@ -1153,157 +1874,22 @@ class _AdminDashboardScreenState
                           ],
                         ),
                         const SizedBox(height: 10),
-                        StreamBuilder<
-                            List<Map<String, dynamic>>>(
-                          stream:
-                              _firebaseService.watchAdmins(),
-                          builder: (context, snapshot) {
-                            final admins =
-                                snapshot.data ?? [];
-                            if (admins.isEmpty) {
-                              return Text(
-                                'No extra admins yet',
-                                style: GoogleFonts.poppins(
-                                  color: colors.textSecondary,
-                                ),
-                              );
-                            }
 
-                            return Column(
-                              children: admins.map((admin) {
-                                return Container(
-                                  margin:
-                                      const EdgeInsets.only(
-                                          bottom: 8),
-                                  padding:
-                                      const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colors.surfaceAlt,
-                                    borderRadius:
-                                        BorderRadius.circular(
-                                            12),
-                                    border: Border.all(
-                                        color:
-                                            colors.borderSoft),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 18,
-                                        backgroundColor: colors
-                                            .brandPrimary
-                                            .withOpacity(0.15),
-                                        child: Text(
-                                          ((admin['displayName'] ??
-                                                          admin[
-                                                              'email'] ??
-                                                          'A')
-                                                      .toString()
-                                                      .isNotEmpty
-                                                  ? (admin['displayName'] ??
-                                                          admin[
-                                                              'email'] ??
-                                                          'A')
-                                                      .toString()[0]
-                                                      .toUpperCase()
-                                                  : 'A'),
-                                          style:
-                                              GoogleFonts.poppins(
-                                            color: colors
-                                                .brandPrimary,
-                                            fontWeight:
-                                                FontWeight.w700,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment
-                                                  .start,
-                                          children: [
-                                            Text(
-                                              (admin['displayName'] ??
-                                                      admin[
-                                                          'email'] ??
-                                                      '')
-                                                  .toString(),
-                                              style: GoogleFonts
-                                                  .poppins(
-                                                color: colors
-                                                    .textPrimary,
-                                                fontWeight:
-                                                    FontWeight.w600,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                            Text(
-                                              (admin['email'] ??
-                                                      '')
-                                                  .toString(),
-                                              style: GoogleFonts
-                                                  .poppins(
-                                                color: colors
-                                                    .textSecondary,
-                                                fontSize: 11,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets
-                                            .symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration:
-                                            BoxDecoration(
-                                          color: colors
-                                              .brandPrimary
-                                              .withOpacity(0.12),
-                                          borderRadius:
-                                              BorderRadius
-                                                  .circular(20),
-                                        ),
-                                        child: Text(
-                                          'Admin',
-                                          style:
-                                              GoogleFonts.poppins(
-                                            color: colors
-                                                .brandPrimary,
-                                            fontSize: 10,
-                                            fontWeight:
-                                                FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            );
-                          },
-                        ),
+                        // Admin list with role management
+                        _buildAdminList(colors),
                       ],
                     ),
                   ),
                   const SizedBox(height: 18),
                 ],
 
-                // ── Products Section Header ──────────────────
+                // ── Products Section Header ──────────────
                 Row(
                   children: [
                     Container(
                       width: 4,
                       height: 20,
                       decoration: BoxDecoration(
-                        // ── Gold accent bar ──────────────────
                         gradient: const LinearGradient(
                           colors: [
                             AppPalette.primaryDark,
@@ -1312,7 +1898,8 @@ class _AdminDashboardScreenState
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius:
+                            BorderRadius.circular(4),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1331,9 +1918,10 @@ class _AdminDashboardScreenState
             ),
           ),
 
-          // ── Products List ────────────────────────────────────
+          // ── Products List ──────────────────────────────────────
           StreamBuilder<List<ProductModel>>(
-            stream: _firebaseService.watchMyUploadedProducts(),
+            stream:
+                _firebaseService.watchMyUploadedProducts(),
             builder: (context, snapshot) {
               final colors = AppTheme.colorsOf(context);
 
@@ -1343,8 +1931,7 @@ class _AdminDashboardScreenState
                   child: Padding(
                     padding: EdgeInsets.all(20),
                     child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                        child: CircularProgressIndicator()),
                   ),
                 );
               }
@@ -1385,7 +1972,6 @@ class _AdminDashboardScreenState
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            // ── Brand name updated ─────────────
                             'Tap "Add Fabric" to upload your first\ntextile product on Phlakes Fabrics',
                             style: GoogleFonts.poppins(
                               color: colors.textSecondary,
@@ -1403,7 +1989,7 @@ class _AdminDashboardScreenState
 
               return SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
-                    16, 0, 16, 24),
+                    16, 0, 16, 100),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -1441,9 +2027,9 @@ class _AdminDashboardScreenState
                                   ? Image.network(
                                       product.imageUrl,
                                       fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (_, __, ___) =>
-                                              Container(
+                                      errorBuilder: (_, __,
+                                              ___) =>
+                                          Container(
                                         color: Theme.of(context)
                                             .colorScheme
                                             .surfaceContainerHighest,
@@ -1485,8 +2071,10 @@ class _AdminDashboardScreenState
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              if (product.fabricType != null &&
-                                  product.fabricType!.isNotEmpty)
+                              if (product.fabricType !=
+                                      null &&
+                                  product.fabricType!
+                                      .isNotEmpty)
                                 Text(
                                   product.fabricType!,
                                   style: GoogleFonts.poppins(
@@ -1525,9 +2113,42 @@ class _AdminDashboardScreenState
                               } else if (value == 'delete') {
                                 await _firebaseService
                                     .deleteProduct(product.id);
+                              } else if (value == 'pos') {
+                                // Quick add to POS from product list
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const PosDashboardScreen(),
+                                  ),
+                                );
                               }
                             },
                             itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: 'pos',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons
+                                          .point_of_sale_rounded,
+                                      color:
+                                          colors.brandPrimary,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Sell via POS',
+                                      style:
+                                          GoogleFonts.poppins(
+                                        color:
+                                            colors.brandPrimary,
+                                        fontWeight:
+                                            FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               PopupMenuItem(
                                 value: 'preview',
                                 child: Row(
@@ -1540,8 +2161,10 @@ class _AdminDashboardScreenState
                                     const SizedBox(width: 8),
                                     Text(
                                       'Preview',
-                                      style: GoogleFonts.poppins(
-                                        color: colors.textPrimary,
+                                      style:
+                                          GoogleFonts.poppins(
+                                        color:
+                                            colors.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -1559,8 +2182,10 @@ class _AdminDashboardScreenState
                                     const SizedBox(width: 8),
                                     Text(
                                       'Edit',
-                                      style: GoogleFonts.poppins(
-                                        color: colors.textPrimary,
+                                      style:
+                                          GoogleFonts.poppins(
+                                        color:
+                                            colors.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -1571,14 +2196,16 @@ class _AdminDashboardScreenState
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Icons.delete_outline_rounded,
+                                      Icons
+                                          .delete_outline_rounded,
                                       color: colors.error,
                                       size: 16,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Delete',
-                                      style: GoogleFonts.poppins(
+                                      style:
+                                          GoogleFonts.poppins(
                                         color: colors.error,
                                       ),
                                     ),
@@ -1632,9 +2259,9 @@ class _StatCard extends StatelessWidget {
     required this.icon,
   });
 
-  final String  title;
-  final String  value;
-  final Color   color;
+  final String title;
+  final String value;
+  final Color color;
   final IconData icon;
 
   @override
@@ -1698,19 +2325,23 @@ class _ActionCard extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.subtitle = '',
+    this.isHighlighted = false,
   });
 
-  final IconData     icon;
-  final String       title;
-  final String       subtitle;
+  final IconData icon;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
+  final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
 
     return Material(
-      color: colors.card,
+      color: isHighlighted
+          ? colors.brandPrimary.withOpacity(0.08)
+          : colors.card,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -1719,32 +2350,44 @@ class _ActionCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colors.borderSoft),
+            border: Border.all(
+              color: isHighlighted
+                  ? colors.brandPrimary.withOpacity(0.4)
+                  : colors.borderSoft,
+              width: isHighlighted ? 1.5 : 1.0,
+            ),
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: colors.brandPrimary.withOpacity(0.10),
+                  color: isHighlighted
+                      ? colors.brandPrimary
+                      : colors.brandPrimary.withOpacity(0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
-                  color: colors.brandPrimary,
+                  color: isHighlighted
+                      ? Colors.black
+                      : colors.brandPrimary,
                   size: 18,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
                       style: GoogleFonts.poppins(
                         color: colors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: isHighlighted
+                            ? FontWeight.w700
+                            : FontWeight.w600,
                         fontSize: 12.5,
                       ),
                     ),
@@ -1804,11 +2447,13 @@ class _Field extends StatelessWidget {
         fillColor: colors.surfaceAlt,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colors.borderSoft),
+          borderSide:
+              BorderSide(color: colors.borderSoft),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colors.borderSoft),
+          borderSide:
+              BorderSide(color: colors.borderSoft),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

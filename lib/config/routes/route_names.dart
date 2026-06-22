@@ -1,23 +1,31 @@
+// lib/config/routes/route_names.dart
+
 class RouteNames {
-  static const String splash = '/';
-  static const String login = '/login';
-  static const String signup = '/signup';
-  static const String home = '/home';
-  static const String admin = '/admin';
-  static const String cart = '/cart';
-  static const String orders = '/orders';
-  static const String profile = '/profile';
-  static const String favorites = '/favorites';
-  static const String addProduct = '/add-product';
-  static const String adminOrders = '/admin-orders';
-  static const String mainShell = '/main-shell';
-  static const String paystackVerify = '/paystack-verify';
+  RouteNames._();
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  static const String splash    = '/';
+  static const String login     = '/login';
+  static const String signup    = '/signup';
+
+  // ── Customer Shell ────────────────────────────────────────────────────────
+  static const String mainShell    = '/shell';
+  static const String home         = '/home';
+  static const String cart         = '/cart';
+  static const String orders       = '/orders';
+  static const String profile      = '/profile';
+  static const String favorites    = '/favorites';
   static const String notifications = '/notifications';
 
-  // ── Redirect Keys ────────────────────────────────────────────────────────────
-  static const String redirectMainShell = 'redirect_main_shell';
-  static const String redirectCart = 'redirect_cart';
-  static const String redirectOrders = 'redirect_orders';
-  static const String redirectProfile = 'redirect_profile';
-  // redirectRider removed — IsmailTex is a textile marketplace, not a ride app
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  static const String admin        = '/admin';
+  static const String addProduct   = '/admin/add-product';
+  static const String adminOrders  = '/admin/orders';
+
+  // ── POS Terminal ──────────────────────────────────────────────────────────
+  /// Main POS dashboard — product search + cart + checkout
+  static const String posDashboard = '/pos';
+
+  /// Receipt display — accepts PosSaleModel or receipt ID string as argument
+  static const String posReceipt   = '/pos/receipt';
 }

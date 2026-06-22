@@ -10,20 +10,6 @@ rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     project.evaluationDependsOn(":app")
-
-    // Fix for legacy plugins that don't define a namespace (e.g. old pub.dev packages)
-    afterEvaluate { project ->
-        if (project.hasProperty("android")) {
-            def android = project.android
-            if (!android.hasProperty("namespace") || android.namespace == null) {
-                if (android.hasProperty("defaultConfig") &&
-                    android.defaultConfig.hasProperty("applicationId") &&
-                    android.defaultConfig.applicationId != null) {
-                    android.namespace = android.defaultConfig.applicationId
-                }
-            }
-        }
-    }
 }
 
 tasks.register("clean", Delete) {

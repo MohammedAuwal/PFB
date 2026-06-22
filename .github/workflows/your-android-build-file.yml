@@ -30,12 +30,24 @@ jobs:
       # ================================================================
       - name: Deploy Firestore Indexes
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/service-account.json
         run: |
+          # Write service account JSON to a temp file
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PHLAKESFABRIC }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
+
+          # Install Firebase CLI
           npm install -g firebase-tools
+
+          # Deploy Firestore indexes using service account (no --token needed)
           firebase deploy \
             --only firestore:indexes \
             --project phlakesfabric \
-            --token "${{ secrets.FIREBASE_TOKEN }}"
+            --non-interactive
+
+          # Clean up credentials file
+          rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
+
           echo "✅ Firestore indexes deployed successfully"
 
       # ================================================================

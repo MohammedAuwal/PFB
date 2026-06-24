@@ -18,9 +18,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
     }
-  } on FirebaseException catch (e) {
-    // Ignore duplicate-app errors
-    if (e.code != 'duplicate-app') rethrow;
+  } catch (e) {
+    // Check error string to capture native platform/web browser exceptions safely
+    final errorStr = e.toString().toLowerCase();
+    if (!errorStr.contains('duplicate-app') && !errorStr.contains('already exists')) {
+      rethrow;
+    }
   } catch (_) {}
 
   try {
@@ -51,9 +54,16 @@ Future<void> main() async {
           options: DefaultFirebaseOptions.currentPlatform,
         ).timeout(const Duration(seconds: 12));
       }
-    } on FirebaseException catch (e) {
-      // ── Ignore duplicate-app errors ───────────────────────────
-      if (e.code != 'duplicate-app') rethrow;
+    } catch (e) {
+      // ── Safe Platform & Browser Duplicate App Check ───────────────────────────
+      // We check the error string directly because when users access the app via
+      // web browsers (like Safari on iOS), exceptions can bypass standard Dart 
+      // 'on FirebaseException' filters.
+      final errorStr = e.toString().toLowerCase();
+      if (!errorStr.contains('duplicate-app') && !errorStr.contains('already exists')) {
+        rethrow; // Only rethrow if it is a genuine network/config failure
+      }
+      // If the instance already exists, we ignore the error and let the app proceed safely
     }
   } catch (e, st) {
     startupError = Exception('Firebase init failed: $e');

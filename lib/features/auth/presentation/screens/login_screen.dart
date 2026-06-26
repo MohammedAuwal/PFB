@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/config/routes/route_names.dart';
@@ -25,9 +28,28 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading        = false;
   bool _googleLoading  = false;
   bool _obscurePassword = true;
+  bool _navigating     = false;
+
+  StreamSubscription<User?>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // ── Auth state safety net ──────────────────────────────────────────────
+    //  If Firebase Auth updates the current user at any point while this
+    //  screen is visible (e.g. ghost-success after a popup error, or the
+    //  splash screen missed a persisted session), navigate automatically.
+    _authSubscription = _authService.authStateChanges.listen((user) {
+      if (user != null && mounted && !_navigating) {
+        _goAfterLogin();
+      }
+    });
+  }
 
   Future<void> _goAfterLogin() async {
-    if (!mounted) return;
+    if (_navigating || !mounted) return;
+    _navigating = true;
 
     try {
       await _firebaseService.ensureUserProfile();
@@ -126,6 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
@@ -139,7 +162,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          // Luxury dark-to-black gradient background
           gradient: LinearGradient(
             colors: isDark
                 ? const [
@@ -158,7 +180,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: Stack(
           children: [
-            // ── Background Gold Glow Circles ─────────────────────
             Positioned(
               top:  -90,
               left: -80,
@@ -227,7 +248,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            // ── Content ───────────────────────────────────────────
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -241,12 +261,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           const SizedBox(height: 60),
 
-                          // Brand Logo
                           _buildBrandLogo(colors, isDark),
 
                           const SizedBox(height: 28),
 
-                          // Login Card
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.fromLTRB(
@@ -331,7 +349,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 20),
 
-                                // Sign In Button — Gold
                                 SizedBox(
                                   width:  double.infinity,
                                   height: 58,
@@ -404,7 +421,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 20),
 
-                                // Divider
                                 Row(
                                   children: [
                                     Expanded(
@@ -451,7 +467,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 20),
 
-                                // Google Button
                                 SizedBox(
                                   width:  double.infinity,
                                   height: 58,
@@ -526,7 +541,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 24),
 
-                                // Sign up link
                                 Center(
                                   child: Column(
                                     children: [
@@ -590,12 +604,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ── Brand Logo ─────────────────────────────────────────────────────────────
-
   Widget _buildBrandLogo(AppThemeColors colors, bool isDark) {
     return Column(
       children: [
-        // Gold gradient circle with "PF"
         Container(
           width:  80,
           height: 80,
@@ -635,7 +646,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 20),
 
-        // "PHLAKES" + "FABRICS"
         Column(
           children: [
             Text(
@@ -669,7 +679,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 8),
 
-        // Gold divider
         Container(
           width:  60,
           height: 2,
@@ -712,8 +721,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-// ── Glass Field ────────────────────────────────────────────────────────────────
 
 class _GlassField extends StatelessWidget {
   final TextEditingController controller;

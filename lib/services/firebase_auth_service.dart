@@ -27,127 +27,9 @@ class FirebaseAuthService {
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
 
-  static String? pendingRedirectError;
-
   User? get currentUser => _firebaseAuth.currentUser;
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // REDIRECT RESULT HANDLING (web)
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Processes any pending redirect-based Google Sign-In result on web.
-  ///
-  /// **MUST be called during app bootstrap** (splash screen) before checking
-  /// [currentUser].  On web, after `signInWithRedirect` navigates the browser
-  /// to Google and back, this method ensures the credential is fully
-  /// processed before the app makes navigation decisions.
-  ///
-  /// It tries three strategies in order:
-  /// 1. `getRedirectResult()` — the official API for retrieving redirect
-  ///    sign-in credentials.
-  /// 2. `currentUser` — the SDK may have auto-processed the redirect.
-  /// 3. `authStateChanges().first` — waits for the auth state stream to
-  ///    emit, which guarantees the redirect result has been settled.
-  Future<User?> handleRedirectResult() async {
-    if (!kIsWeb) return null;
-
-    try {
-      // ── Strategy 1: getRedirectResult() ───────────────────────────────
-      final UserCredential? userCredential =
-          await _firebaseAuth.getRedirectResult();
-
-      if (userCredential?.user != null) {
-        await FcmService.instance.syncTokenForCurrentUser();
-        if (kDebugMode) {
-          debugPrint(
-            '🔐 Phlakes Fabric | Redirect result (getRedirectResult): '
-            'success uid=${userCredential!.user!.uid}',
-          );
-        }
-        return userCredential!.user;
-      }
-
-      // ── Strategy 2: currentUser fallback ──────────────────────────────
-      //  The SDK may have auto-processed the redirect without exposing it
-      //  through getRedirectResult().
-      if (_firebaseAuth.currentUser != null) {
-        await FcmService.instance.syncTokenForCurrentUser();
-        if (kDebugMode) {
-          debugPrint(
-            '🔐 Phlakes Fabric | Redirect result (currentUser): '
-            'success uid=${_firebaseAuth.currentUser!.uid}',
-          );
-        }
-        return _firebaseAuth.currentUser;
-      }
-
-      // ── Strategy 3: wait for authStateChanges ─────────────────────────
-      //  On some browsers / SDK versions, the redirect result is not yet
-      //  available synchronously.  authStateChanges() waits for the initial
-      //  auth state to be fully determined before emitting, so it will
-      //  reflect the signed-in user from the redirect once processed.
-      if (kDebugMode) {
-        debugPrint(
-          '🔐 Phlakes Fabric | Redirect result: waiting for '
-          'authStateChanges to settle…',
-        );
-      }
-
-      try {
-        final user = await _firebaseAuth.authStateChanges()
-            .first
-            .timeout(const Duration(seconds: 6));
-
-        if (user != null) {
-          await FcmService.instance.syncTokenForCurrentUser();
-          if (kDebugMode) {
-            debugPrint(
-              '🔐 Phlakes Fabric | Redirect result (authStateChanges): '
-              'success uid=${user.uid}',
-            );
-          }
-        } else {
-          if (kDebugMode) {
-            debugPrint(
-              '🔐 Phlakes Fabric | Redirect result: no user '
-              '(normal launch, no redirect pending)',
-            );
-          }
-        }
-
-        return user;
-      } on TimeoutException {
-        if (kDebugMode) {
-          debugPrint(
-            '🔐 Phlakes Fabric | Redirect result: authStateChanges '
-            'timed out, falling back to currentUser',
-          );
-        }
-        return _firebaseAuth.currentUser;
-      }
-    } on FirebaseAuthException catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-          '🔐 Phlakes Fabric | Redirect FirebaseAuthException: '
-          'code=${e.code}, message=${e.message}',
-        );
-      }
-      pendingRedirectError = _mapFirebaseError(e.code, e.message);
-      return null;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('🔐 Phlakes Fabric | Redirect result error: $e');
-      }
-      pendingRedirectError = 'Google Sign-In redirect failed. Please try again.';
-      return null;
-    }
-  }
-
-  static void clearRedirectError() {
-    pendingRedirectError = null;
-  }
 
   // ────────────────────────────────────────────────────────────────────────────
   // EMAIL / PASSWORD
@@ -213,31 +95,67 @@ class FirebaseAuthService {
         );
       }
 
-      // ── WEB: Use redirect flow (reliable on all browsers) ────────────────
+      // ── WEB: Popup flow + ghost success recovery ────────────────────────
       if (kIsWeb) {
         final provider = GoogleAuthProvider();
         provider.setCustomParameters({'prompt': 'select_account'});
         provider.addScope('email');
         provider.addScope('profile');
 
-        // signInWithRedirect navigates the entire page to Google.
-        // It returns void because the current page context is destroyed.
-        // When the user returns, handleRedirectResult() (called during
-        // bootstrap in the splash screen) processes the credential.
-        await _firebaseAuth.signInWithRedirect(provider);
+        try {
+          final userCredential =
+              await _firebaseAuth.signInWithPopup(provider);
+          final user = userCredential.user;
+          if (user != null) {
+            await FcmService.instance.syncTokenForCurrentUser();
+            if (kDebugMode) {
+              debugPrint(
+                '🔐 Phlakes Fabric | Google Sign-In popup: '
+                'success uid=${user.uid}',
+              );
+            }
+          }
+          return user;
+        } on FirebaseAuthException catch (popupError) {
+          // ── User cancelled — no recovery needed ───────────────────────
+          if (popupError.code == 'popup-closed-by-user' ||
+              popupError.code == 'cancelled-popup-request') {
+            if (kDebugMode) {
+              debugPrint(
+                '🔐 Phlakes Fabric | Google Sign-In: user cancelled',
+              );
+            }
+            throw AuthFailure('Google sign-in was cancelled.');
+          }
 
-        // If we reach here the redirect didn't navigate away (rare).
-        final user = _firebaseAuth.currentUser;
-        if (user != null) {
-          await FcmService.instance.syncTokenForCurrentUser();
-          if (kDebugMode) {
-            debugPrint(
-              '🔐 Phlakes Fabric | Google Sign-In (no-redirect path): '
-              'success uid=${user.uid}',
+          // ── Popup blocked ─────────────────────────────────────────────
+          if (popupError.code == 'popup-blocked') {
+            throw AuthFailure(
+              'Popup blocked. Allow popups and try again.',
             );
           }
+
+          // ── Ghost success recovery ────────────────────────────────────
+          //  signInWithPopup can fail with a network / CORS error even
+          //  though the sign-in succeeded on Google's servers.  The auth
+          //  state may still update asynchronously.  Wait briefly for a
+          //  signed-in user to appear on authStateChanges().
+          if (kDebugMode) {
+            debugPrint(
+              '🔐 Phlakes Fabric | Google Sign-In popup error: '
+              '${popupError.code}. Attempting ghost-success recovery…',
+            );
+          }
+
+          final recoveredUser = await _recoverGhostSignIn();
+          if (recoveredUser != null) {
+            return recoveredUser;
+          }
+
+          throw AuthFailure(
+            _mapFirebaseError(popupError.code, popupError.message),
+          );
         }
-        return user;
       }
 
       // ── ANDROID: Use google_sign_in then exchange token ─────────────────
@@ -319,6 +237,57 @@ class FirebaseAuthService {
         debugPrint('🔐 Phlakes Fabric | Unknown error: $e');
       }
       throw AuthFailure('Google Sign-In failed. Please try again.');
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // GHOST SUCCESS RECOVERY (web)
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /// After a popup sign-in fails with a network error, the underlying
+  /// sign-in may still have succeeded.  This method checks whether the
+  /// Firebase Auth state has been updated to reflect a signed-in user.
+  Future<User?> _recoverGhostSignIn() async {
+    try {
+      // Check 1: currentUser might already be updated
+      if (_firebaseAuth.currentUser != null) {
+        await FcmService.instance.syncTokenForCurrentUser();
+        if (kDebugMode) {
+          debugPrint(
+            '🔐 Phlakes Fabric | Ghost recovery (currentUser): '
+            'success uid=${_firebaseAuth.currentUser!.uid}',
+          );
+        }
+        return _firebaseAuth.currentUser;
+      }
+
+      // Check 2: Wait for authStateChanges to emit a signed-in user
+      final user = await _firebaseAuth
+          .authStateChanges()
+          .firstWhere((u) => u != null)
+          .timeout(const Duration(seconds: 4));
+
+      await FcmService.instance.syncTokenForCurrentUser();
+      if (kDebugMode) {
+        debugPrint(
+          '🔐 Phlakes Fabric | Ghost recovery (authStateChanges): '
+          'success uid=${user.uid}',
+        );
+      }
+      return user;
+    } on TimeoutException {
+      if (kDebugMode) {
+        debugPrint(
+          '🔐 Phlakes Fabric | Ghost recovery: timed out — '
+          'sign-in likely did not succeed',
+        );
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('🔐 Phlakes Fabric | Ghost recovery error: $e');
+      }
+      return null;
     }
   }
 

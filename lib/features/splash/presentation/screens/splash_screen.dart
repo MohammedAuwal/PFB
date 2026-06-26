@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/config/routes/route_names.dart';
 import 'package:pfb/core/routing/app_router.dart';
 import 'package:pfb/core/theme/app_theme.dart';
-import 'package:pfb/services/firebase_auth_service.dart';
 import 'package:pfb/services/firebase_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -139,14 +138,11 @@ class _SplashScreenState extends State<SplashScreen>
 
   /// Resolves the current Firebase Auth user.
   ///
-  /// On web, after a `signInWithRedirect`, the Firebase Auth SDK processes
-  /// the redirect result asynchronously.  Simply reading `currentUser` may
-  /// return `null` even though the sign-in succeeded, because the SDK
-  /// hasn't finished processing yet.
-  ///
-  /// `authStateChanges().first` waits for the SDK to finish initialisation
-  /// (including redirect processing) before emitting, so it always returns
-  /// the correct auth state.
+  /// On web, the Firebase Auth SDK processes the persisted auth state
+  /// asynchronously (from IndexedDB).  `authStateChanges().first` waits
+  /// for the SDK to finish initialisation before emitting, so it always
+  /// returns the correct auth state — even after a hard browser refresh
+  /// triggered by a failed popup callback.
   Future<User?> _resolveCurrentUser() async {
     if (!kIsWeb) {
       return FirebaseAuth.instance.currentUser;
@@ -158,7 +154,6 @@ class _SplashScreenState extends State<SplashScreen>
           .first
           .timeout(const Duration(seconds: 8));
     } catch (_) {
-      // Timeout or error – fall back to synchronous check
       return FirebaseAuth.instance.currentUser;
     }
   }
@@ -170,27 +165,12 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _bootstrap() async {
     final firebaseService = FirebaseService();
 
-    // ── WEB: Process any pending Google Sign-In redirect result ──────────
-    //  This also calls getRedirectResult() and waits for authStateChanges
-    //  internally, so by the time it completes the auth state is settled.
-    if (kIsWeb) {
-      try {
-        final authService = FirebaseAuthService();
-        await authService.handleRedirectResult();
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('🔐 Bootstrap | redirect result error: $e');
-        }
-      }
-    }
-
     unawaited(firebaseService.seedDefaultAppSettingsSafely());
     unawaited(firebaseService.seedDefaultCategoriesIfMissingSafely());
 
     // ── Resolve the current user ─────────────────────────────────────────
     //  On web this waits for authStateChanges().first, which guarantees
-    //  the redirect result has been fully processed before we decide
-    //  where to navigate.
+    //  the persisted auth state has been fully loaded from IndexedDB.
     final User? user = await _resolveCurrentUser();
 
     if (user != null) {

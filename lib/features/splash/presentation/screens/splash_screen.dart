@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/config/routes/route_names.dart';
 import 'package:pfb/core/routing/app_router.dart';
 import 'package:pfb/core/theme/app_theme.dart';
-import 'package:pfb/services/firebase_auth_service.dart';
 import 'package:pfb/services/firebase_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,9 +20,6 @@ class _SplashScreenState extends State<SplashScreen>
   bool _navigated = false;
   bool _booting = false;
   String? _errorText;
-
-  // ── NEW: track whether we are waiting for a Google redirect ──────────────
-  bool _awaitingRedirect = false;
 
   late final AnimationController _introController;
   late final AnimationController _pulseController;
@@ -104,7 +100,6 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.any([
         _bootstrap(),
         Future.delayed(const Duration(seconds: 20), () {
-          // Increased to 20 s to give the redirect result time to resolve.
           throw Exception(
             'App startup timed out. Please check your internet and try again.',
           );
@@ -137,57 +132,28 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _bootstrap() async {
-    // ── STEP 1 (Web only): consume any pending Google redirect result ────────
-    // This is the critical fix.  When the user completes Google OAuth, the
-    // browser navigates back to the app and lands on SplashScreen.
-    // getRedirectResultIfAny() reads the credential Firebase stored in
-    // sessionStorage, signs the user in, and returns the User object.
-    // Without this call the credential is lost and the app looks broken.
-    if (kIsWeb) {
-      try {
-        if (mounted) {
-          setState(() => _awaitingRedirect = true);
-        }
+    // NOTE: On web, getRedirectResult() was already called in main()
+    // before runApp(). By the time we reach here, FirebaseAuth.instance
+    // .currentUser is already populated if the user just completed a
+    // Google redirect sign-in. We simply read the current user.
 
-        final authService = FirebaseAuthService();
-        final redirectUser =
-            await authService.getRedirectResultIfAny();
-
-        if (mounted) {
-          setState(() => _awaitingRedirect = false);
-        }
-
-        if (redirectUser != null) {
-          // Redirect sign-in succeeded – run post-login setup and route.
-          if (kDebugMode) {
-            debugPrint(
-                '🔐 SplashScreen | Redirect sign-in resolved → '
-                'uid=${redirectUser.uid}');
-          }
-          await _postLoginSetupAndRoute();
-          return;
-        }
-      } on Exception catch (e) {
-        // A real auth error from getRedirectResult (e.g. account conflict).
-        if (mounted) {
-          setState(() => _awaitingRedirect = false);
-        }
-        if (kDebugMode) {
-          debugPrint('🔐 SplashScreen | getRedirectResult error: $e');
-        }
-        // Surface as "Google sign in failed" on the login screen.
-        await _safeNavigate(RouteNames.login);
-        return;
-      }
-    }
-
-    // ── STEP 2: Normal bootstrap (no pending redirect) ───────────────────────
     final firebaseService = FirebaseService();
 
     unawaited(firebaseService.seedDefaultAppSettingsSafely());
     unawaited(firebaseService.seedDefaultCategoriesIfMissingSafely());
 
+    // On web, give FirebaseAuth a moment to fully restore its state
+    // from the IndexedDB persistence layer before reading currentUser.
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
     final user = firebaseService.currentUser;
+
+    if (kDebugMode) {
+      debugPrint(
+          '🚀 SplashScreen | currentUser=${user?.uid ?? 'null'}');
+    }
 
     if (user != null) {
       unawaited(firebaseService.ensureUserProfileSafely());
@@ -206,34 +172,13 @@ class _SplashScreenState extends State<SplashScreen>
         await _safeNavigate(RouteNames.admin);
         return;
       }
-    }
 
-    await _safeNavigate(RouteNames.mainShell);
-  }
-
-  // ── Shared post-login setup used after a redirect sign-in ─────────────────
-  Future<void> _postLoginSetupAndRoute() async {
-    final firebaseService = FirebaseService();
-
-    unawaited(firebaseService.seedDefaultAppSettingsSafely());
-    unawaited(firebaseService.seedDefaultCategoriesIfMissingSafely());
-    unawaited(firebaseService.ensureUserProfileSafely());
-    unawaited(firebaseService.syncLocalCartToFirestoreSafely());
-
-    bool isAdmin = false;
-    try {
-      isAdmin = await firebaseService
-          .isAdmin()
-          .timeout(const Duration(seconds: 6));
-    } catch (_) {
-      isAdmin = false;
-    }
-
-    if (isAdmin) {
-      await _safeNavigate(RouteNames.admin);
+      // ── Authenticated non-admin → go to main shell ──────────────
+      await _safeNavigate(RouteNames.mainShell);
       return;
     }
 
+    // ── Not authenticated → go to main shell (guest mode) ──────────
     await _safeNavigate(RouteNames.mainShell);
   }
 
@@ -241,7 +186,6 @@ class _SplashScreenState extends State<SplashScreen>
     setState(() {
       _errorText = null;
       _navigated = false;
-      _awaitingRedirect = false;
     });
     await _start();
   }
@@ -286,7 +230,6 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Stack(
           children: [
-            // ── Background gold glow ─────────────────────────────
             Positioned(
               top: -60,
               left: -60,
@@ -328,7 +271,8 @@ class _SplashScreenState extends State<SplashScreen>
             SafeArea(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32),
                   child: FadeTransition(
                     opacity: _fadeAnimation,
                     child: ScaleTransition(
@@ -351,15 +295,11 @@ class _SplashScreenState extends State<SplashScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Animated Gold Logo ───────────────────────────────────
         ScaleTransition(
           scale: _pulseAnimation,
           child: _PhlakesLogo(isDark: isDark),
         ),
-
         const SizedBox(height: 32),
-
-        // ── Brand Name ───────────────────────────────────────────
         SlideTransition(
           position: _textSlideAnimation,
           child: Column(
@@ -391,11 +331,15 @@ class _SplashScreenState extends State<SplashScreen>
                       ],
                       stops: [
                         0.0,
-                        (_shimmerAnimation.value - 0.3).clamp(0.0, 1.0),
+                        (_shimmerAnimation.value - 0.3)
+                            .clamp(0.0, 1.0),
                         (_shimmerAnimation.value).clamp(0.0, 1.0),
-                        (_shimmerAnimation.value + 0.1).clamp(0.0, 1.0),
-                        (_shimmerAnimation.value + 0.2).clamp(0.0, 1.0),
-                        (_shimmerAnimation.value + 0.4).clamp(0.0, 1.0),
+                        (_shimmerAnimation.value + 0.1)
+                            .clamp(0.0, 1.0),
+                        (_shimmerAnimation.value + 0.2)
+                            .clamp(0.0, 1.0),
+                        (_shimmerAnimation.value + 0.4)
+                            .clamp(0.0, 1.0),
                         1.0,
                       ],
                     ).createShader(bounds),
@@ -445,7 +389,10 @@ class _SplashScreenState extends State<SplashScreen>
               const SizedBox(height: 4),
               ShaderMask(
                 shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AppPalette.primaryDark, AppPalette.primary],
+                  colors: [
+                    AppPalette.primaryDark,
+                    AppPalette.primary,
+                  ],
                 ).createShader(bounds),
                 child: Text(
                   'Quality you can feel.',
@@ -460,10 +407,7 @@ class _SplashScreenState extends State<SplashScreen>
             ],
           ),
         ),
-
         const SizedBox(height: 40),
-
-        // ── Loading indicator with context-aware label ───────────
         TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0.4, end: 1),
           duration: const Duration(milliseconds: 800),
@@ -471,32 +415,15 @@ class _SplashScreenState extends State<SplashScreen>
           builder: (context, value, child) {
             return Opacity(opacity: value, child: child);
           },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  color: AppPalette.primary,
-                  strokeWidth: 2.5,
-                  backgroundColor:
-                      AppPalette.primary.withOpacity(0.15),
-                ),
-              ),
-              // ── NEW: Show a helpful label while processing redirect ──
-              if (_awaitingRedirect) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'Completing sign-in…',
-                  style: GoogleFonts.poppins(
-                    color: colors.textSecondary,
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ],
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              color: AppPalette.primary,
+              strokeWidth: 2.5,
+              backgroundColor:
+                  AppPalette.primary.withOpacity(0.15),
+            ),
           ),
         ),
       ],
@@ -567,7 +494,8 @@ class _SplashScreenState extends State<SplashScreen>
             icon: const Icon(Icons.refresh_rounded),
             label: Text(
               'Retry',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+              style:
+                  GoogleFonts.poppins(fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -671,7 +599,8 @@ class _PhlakesLogo extends StatelessWidget {
               return Container(
                 width: 4,
                 height: 4,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppPalette.primary.withOpacity(

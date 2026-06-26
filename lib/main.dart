@@ -36,7 +36,6 @@ Future<void> _firebaseMessagingBackgroundHandler(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Only apply system UI overlay on non-web platforms
   if (!kIsWeb) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -71,52 +70,81 @@ Future<void> main() async {
     startupStack = st;
   }
 
-  // ── Step 2 (Web only): Consume any pending Google redirect result ─────────
+  // ── Step 2 (Web only): Set persistence then check auth state ─────────────
   //
-  // WHAT HAPPENS:
-  //   When the user clicks "Continue with Google", we call
-  //   signInWithRedirect(). The browser leaves the app, goes to Google,
-  //   the user picks their account, and Google sends the browser BACK to
-  //   your app URL (phlakesfabric.web.app).
+  // We now use signInWithPopup (not redirect) so there is no cross-origin
+  // sessionStorage problem. However we still call getRedirectResult() once
+  // as a safety net in case an old redirect from a previous app version is
+  // still pending in the browser.
   //
-  // THE PROBLEM:
-  //   On return, your Flutter app cold-boots from scratch. FirebaseAuth
-  //   has the credential stored in IndexedDB/sessionStorage, but it is
-  //   NOT yet applied to currentUser. It only gets applied AFTER you call
-  //   getRedirectResult(). If you don't call it, currentUser stays null,
-  //   SplashScreen routes the user as a guest, and the sign-in appears to
-  //   have failed.
-  //
-  // THE FIX:
-  //   Call getRedirectResult() HERE — before runApp() — so that by the
-  //   time SplashScreen reads FirebaseAuth.instance.currentUser the user
-  //   is fully authenticated and routing works correctly.
+  // More importantly: on web, FirebaseAuth restores the signed-in user from
+  // IndexedDB asynchronously. We must wait for authStateChanges to emit
+  // at least one event before SplashScreen reads currentUser, otherwise
+  // currentUser is null on first render even for a user who was already
+  // logged in before closing the tab.
   if (startupError == null && kIsWeb) {
+    try {
+      // Set LOCAL persistence so the user stays logged in across
+      // browser sessions (tabs closing, phone sleeping, etc.)
+      await FirebaseAuth.instance
+          .setPersistence(Persistence.LOCAL);
+
+      if (kDebugMode) {
+        debugPrint('🔐 main() | Web persistence set to LOCAL');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('🔐 main() | setPersistence error (non-fatal): $e');
+      }
+    }
+
+    // Safety net: consume any pending redirect result from old code paths
     try {
       final result =
           await FirebaseAuth.instance.getRedirectResult();
-
-      if (kDebugMode) {
-        if (result.user != null) {
-          debugPrint(
-            '🔐 main() | ✅ Google redirect sign-in resolved → '
-            'uid=${result.user!.uid} '
-            'email=${result.user!.email}',
-          );
-        } else {
-          debugPrint(
-            '🔐 main() | No pending redirect result '
-            '(normal cold start)',
-          );
-        }
+      if (result.user != null && kDebugMode) {
+        debugPrint(
+            '🔐 main() | Safety-net redirect result: '
+            'uid=${result.user!.uid}');
       }
     } catch (e) {
-      // This is NOT fatal. It fires on every normal cold start with
-      // code 'no-auth-event'. We only log it in debug mode.
       if (kDebugMode) {
-        debugPrint('🔐 main() | getRedirectResult info: $e');
+        debugPrint(
+            '🔐 main() | getRedirectResult (safety-net): $e');
       }
-      // Do NOT set startupError here — the app must still launch.
+    }
+
+    // Wait for Firebase to restore auth state from IndexedDB.
+    // This is the KEY fix for "user appears logged out on first render":
+    // authStateChanges always emits null first, then the real user.
+    // We wait for the FIRST non-loading emission (up to 5 seconds).
+    try {
+      await FirebaseAuth.instance
+          .authStateChanges()
+          .first
+          .timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          if (kDebugMode) {
+            debugPrint(
+                '🔐 main() | authStateChanges timeout — '
+                'proceeding as guest');
+          }
+          return null;
+        },
+      );
+
+      if (kDebugMode) {
+        final u = FirebaseAuth.instance.currentUser;
+        debugPrint(
+            '🔐 main() | Auth state resolved → '
+            '${u != null ? 'uid=${u.uid}' : 'guest'}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            '🔐 main() | authStateChanges error (non-fatal): $e');
+      }
     }
   }
 
@@ -146,7 +174,7 @@ Future<void> main() async {
     }
   }
 
-  // ── Step 5: Launch the app ───────────────────────────────────────────────
+  // ── Step 5: Launch ───────────────────────────────────────────────────────
   runApp(
     startupError == null
         ? const IftApp()
@@ -165,7 +193,6 @@ Future<void> main() async {
   }
 }
 
-// ── FCM init for Android/iOS (non-blocking) ───────────────────────────────────
 Future<void> _initializeFcmNonBlocking() async {
   try {
     await FcmService.instance
@@ -174,19 +201,13 @@ Future<void> _initializeFcmNonBlocking() async {
   } catch (_) {}
 }
 
-// ── FCM init for Web (non-blocking, best-effort) ──────────────────────────────
 Future<void> _initializeFcmWebNonBlocking() async {
   try {
     await FcmService.instance
         .initialize()
         .timeout(const Duration(seconds: 20));
-  } catch (_) {
-    // FCM on web requires HTTPS and a valid VAPID key.
-    // Failures here are non-fatal — the app works without push notifications.
-  }
+  } catch (_) {}
 }
-
-// ── Startup Error Screen ──────────────────────────────────────────────────────
 
 class StartupErrorApp extends StatelessWidget {
   final Object error;

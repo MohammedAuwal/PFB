@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -39,12 +40,10 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     );
-
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -54,36 +53,23 @@ class _SplashScreenState extends State<SplashScreen>
       parent: _introController,
       curve: Curves.easeOut,
     );
-
     _scaleAnimation = Tween<double>(begin: 0.85, end: 1).animate(
       CurvedAnimation(
-        parent: _introController,
-        curve: Curves.easeOutBack,
-      ),
+          parent: _introController, curve: Curves.easeOutBack),
     );
-
     _textSlideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.10),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _introController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
+    ).animate(CurvedAnimation(
+        parent: _introController, curve: Curves.easeOutCubic));
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.06).animate(
       CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
+          parent: _pulseController, curve: Curves.easeInOut),
     );
-
-    _shimmerAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(
+    _shimmerAnimation =
+        Tween<double>(begin: -1.0, end: 2.0).animate(
       CurvedAnimation(
-        parent: _shimmerController,
-        curve: Curves.easeInOut,
-      ),
+          parent: _shimmerController, curve: Curves.easeInOut),
     );
 
     _introController.forward();
@@ -101,20 +87,19 @@ class _SplashScreenState extends State<SplashScreen>
         _bootstrap(),
         Future.delayed(const Duration(seconds: 20), () {
           throw Exception(
-            'App startup timed out. Please check your internet and try again.',
+            'App startup timed out. '
+            'Please check your internet and try again.',
           );
         }),
       ]);
     } catch (e) {
       if (!mounted) return;
-
       final errorStr = e.toString().toLowerCase();
       if (errorStr.contains('permission-denied') ||
           errorStr.contains('permission denied')) {
         await _safeNavigate(RouteNames.mainShell);
         return;
       }
-
       setState(() => _errorText = e.toString());
     } finally {
       _booting = false;
@@ -124,7 +109,6 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _safeNavigate(String routeName) async {
     if (!mounted || _navigated) return;
     _navigated = true;
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       await AppRouter.clearAndGo(context, routeName);
@@ -132,27 +116,43 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _bootstrap() async {
-    // NOTE: On web, getRedirectResult() was already called in main()
-    // before runApp(). By the time we reach here, FirebaseAuth.instance
-    // .currentUser is already populated if the user just completed a
-    // Google redirect sign-in. We simply read the current user.
-
     final firebaseService = FirebaseService();
 
     unawaited(firebaseService.seedDefaultAppSettingsSafely());
-    unawaited(firebaseService.seedDefaultCategoriesIfMissingSafely());
+    unawaited(
+        firebaseService.seedDefaultCategoriesIfMissingSafely());
 
-    // On web, give FirebaseAuth a moment to fully restore its state
-    // from the IndexedDB persistence layer before reading currentUser.
-    if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
-
-    final user = firebaseService.currentUser;
+    // On web, FirebaseAuth state is already fully resolved by the time
+    // we reach here (main() awaited authStateChanges().first before
+    // calling runApp). We can safely read currentUser directly.
+    //
+    // On Android, currentUser is synchronously available from the
+    // native SDK on startup.
+    //
+    // In both cases — no extra delay needed.
+    User? user = firebaseService.currentUser;
 
     if (kDebugMode) {
       debugPrint(
-          '🚀 SplashScreen | currentUser=${user?.uid ?? 'null'}');
+          '🚀 SplashScreen | currentUser='
+          '${user?.uid ?? 'null (guest)'}');
+    }
+
+    // Extra safety for web: if currentUser is somehow still null but
+    // Firebase reports a signed-in user via authStateChanges, wait for it.
+    if (user == null && kIsWeb) {
+      try {
+        user = await FirebaseAuth.instance
+            .authStateChanges()
+            .first
+            .timeout(const Duration(seconds: 3));
+
+        if (kDebugMode) {
+          debugPrint(
+              '🚀 SplashScreen | authStateChanges fallback → '
+              '${user?.uid ?? 'still null'}');
+        }
+      } catch (_) {}
     }
 
     if (user != null) {
@@ -172,13 +172,8 @@ class _SplashScreenState extends State<SplashScreen>
         await _safeNavigate(RouteNames.admin);
         return;
       }
-
-      // ── Authenticated non-admin → go to main shell ──────────────
-      await _safeNavigate(RouteNames.mainShell);
-      return;
     }
 
-    // ── Not authenticated → go to main shell (guest mode) ──────────
     await _safeNavigate(RouteNames.mainShell);
   }
 
@@ -238,14 +233,12 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppPalette.primary.withOpacity(
-                    isDark ? 0.06 : 0.08,
-                  ),
+                  color: AppPalette.primary
+                      .withOpacity(isDark ? 0.06 : 0.08),
                   boxShadow: [
                     BoxShadow(
-                      color: AppPalette.primary.withOpacity(
-                        isDark ? 0.10 : 0.06,
-                      ),
+                      color: AppPalette.primary
+                          .withOpacity(isDark ? 0.10 : 0.06),
                       blurRadius: 80,
                       spreadRadius: 20,
                     ),
@@ -261,24 +254,23 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppPalette.primaryDark.withOpacity(
-                    isDark ? 0.08 : 0.06,
-                  ),
+                  color: AppPalette.primaryDark
+                      .withOpacity(isDark ? 0.08 : 0.06),
                 ),
               ),
             ),
-
             SafeArea(
               child: Center(
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 32),
                   child: FadeTransition(
                     opacity: _fadeAnimation,
                     child: ScaleTransition(
                       scale: _scaleAnimation,
                       child: _errorText == null
-                          ? _buildLoadingContent(colors, isDark)
+                          ? _buildLoadingContent(
+                              colors, isDark)
                           : _buildErrorContent(colors),
                     ),
                   ),
@@ -291,7 +283,8 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildLoadingContent(AppThemeColors colors, bool isDark) {
+  Widget _buildLoadingContent(
+      AppThemeColors colors, bool isDark) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -307,7 +300,9 @@ class _SplashScreenState extends State<SplashScreen>
               Text(
                 'PHLAKES',
                 style: GoogleFonts.cinzel(
-                  color: isDark ? Colors.white : AppPalette.secondary,
+                  color: isDark
+                      ? Colors.white
+                      : AppPalette.secondary,
                   fontSize: 32,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 4,
@@ -317,7 +312,8 @@ class _SplashScreenState extends State<SplashScreen>
                 animation: _shimmerAnimation,
                 builder: (context, child) {
                   return ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
+                    shaderCallback: (bounds) =>
+                        LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                       colors: const [
@@ -333,7 +329,8 @@ class _SplashScreenState extends State<SplashScreen>
                         0.0,
                         (_shimmerAnimation.value - 0.3)
                             .clamp(0.0, 1.0),
-                        (_shimmerAnimation.value).clamp(0.0, 1.0),
+                        (_shimmerAnimation.value)
+                            .clamp(0.0, 1.0),
                         (_shimmerAnimation.value + 0.1)
                             .clamp(0.0, 1.0),
                         (_shimmerAnimation.value + 0.2)
@@ -388,7 +385,8 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 4),
               ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
+                shaderCallback: (bounds) =>
+                    const LinearGradient(
                   colors: [
                     AppPalette.primaryDark,
                     AppPalette.primary,
@@ -412,9 +410,8 @@ class _SplashScreenState extends State<SplashScreen>
           tween: Tween<double>(begin: 0.4, end: 1),
           duration: const Duration(milliseconds: 800),
           curve: Curves.easeInOut,
-          builder: (context, value, child) {
-            return Opacity(opacity: value, child: child);
-          },
+          builder: (context, value, child) =>
+              Opacity(opacity: value, child: child),
           child: SizedBox(
             width: 28,
             height: 28,
@@ -477,7 +474,10 @@ class _SplashScreenState extends State<SplashScreen>
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [AppPalette.primaryDark, AppPalette.primary],
+              colors: [
+                AppPalette.primaryDark,
+                AppPalette.primary,
+              ],
             ),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -494,8 +494,8 @@ class _SplashScreenState extends State<SplashScreen>
             icon: const Icon(Icons.refresh_rounded),
             label: Text(
               'Retry',
-              style:
-                  GoogleFonts.poppins(fontWeight: FontWeight.w700),
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -504,11 +504,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ── Phlakes Logo Widget ────────────────────────────────────────────────────────
+// ── Phlakes Logo ───────────────────────────────────────────────────────────────
 
 class _PhlakesLogo extends StatelessWidget {
   final bool isDark;
-
   const _PhlakesLogo({required this.isDark});
 
   @override
@@ -521,13 +520,11 @@ class _PhlakesLogo extends StatelessWidget {
           height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppPalette.primary.withOpacity(
-              isDark ? 0.06 : 0.08,
-            ),
+            color: AppPalette.primary
+                .withOpacity(isDark ? 0.06 : 0.08),
             border: Border.all(
-              color: AppPalette.primary.withOpacity(
-                isDark ? 0.25 : 0.15,
-              ),
+              color: AppPalette.primary
+                  .withOpacity(isDark ? 0.25 : 0.15),
               width: 1.5,
             ),
           ),
@@ -537,13 +534,11 @@ class _PhlakesLogo extends StatelessWidget {
           height: 108,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppPalette.primary.withOpacity(
-              isDark ? 0.04 : 0.06,
-            ),
+            color: AppPalette.primary
+                .withOpacity(isDark ? 0.04 : 0.06),
             border: Border.all(
-              color: AppPalette.primary.withOpacity(
-                isDark ? 0.20 : 0.12,
-              ),
+              color: AppPalette.primary
+                  .withOpacity(isDark ? 0.20 : 0.12),
               width: 1,
             ),
           ),
@@ -564,15 +559,15 @@ class _PhlakesLogo extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: AppPalette.primary.withOpacity(
-                  isDark ? 0.55 : 0.35,
-                ),
+                color: AppPalette.primary
+                    .withOpacity(isDark ? 0.55 : 0.35),
                 blurRadius: 24,
                 spreadRadius: 3,
                 offset: const Offset(0, 6),
               ),
               BoxShadow(
-                color: AppPalette.primaryLight.withOpacity(0.20),
+                color:
+                    AppPalette.primaryLight.withOpacity(0.20),
                 blurRadius: 12,
                 spreadRadius: 0,
                 offset: Offset.zero,
@@ -599,13 +594,12 @@ class _PhlakesLogo extends StatelessWidget {
               return Container(
                 width: 4,
                 height: 4,
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 2),
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppPalette.primary.withOpacity(
-                    isDark ? 0.55 : 0.35,
-                  ),
+                      isDark ? 0.55 : 0.35),
                 ),
               );
             }),

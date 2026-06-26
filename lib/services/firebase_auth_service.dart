@@ -32,29 +32,58 @@ class FirebaseAuthService {
   Stream<User?> get authStateChanges =>
       _firebaseAuth.authStateChanges();
 
-  // ── Web-only: check for any pending redirect result ───────────────────────
-  // Still kept for safety but popup is now the primary web flow.
+  // ── Called in main() before runApp() on web ──────────────────────────────
+  // Now that the Google Cloud Console has the web.app redirect URI,
+  // getRedirectResult() will successfully read the credential that
+  // Firebase stored during the OAuth round-trip.
   Future<User?> getRedirectResultIfAny() async {
     if (!kIsWeb) return null;
     try {
+      if (kDebugMode) {
+        debugPrint(
+            '🔐 PhlakesFabric | Checking redirect result…');
+      }
+
       final result = await _firebaseAuth
           .getRedirectResult()
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
+
       final user = result.user;
+
       if (user != null) {
         if (kDebugMode) {
           debugPrint(
-              '🔐 PhlakesFabric | Redirect result found → '
-              'uid=${user.uid}');
+              '🔐 PhlakesFabric | ✅ Redirect sign-in resolved → '
+              'uid=${user.uid} email=${user.email}');
         }
         try {
           await FcmService.instance.syncTokenForCurrentUser();
         } catch (_) {}
+        return user;
       }
-      return user;
+
+      if (kDebugMode) {
+        debugPrint(
+            '🔐 PhlakesFabric | No pending redirect '
+            '(normal cold start)');
+      }
+      return null;
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            '🔐 PhlakesFabric | getRedirectResult '
+            'FirebaseAuthException: code=${e.code}');
+      }
+      // no-auth-event = no redirect pending, totally normal
+      if (e.code == 'no-auth-event' ||
+          e.code == 'null-user') {
+        return null;
+      }
+      throw AuthFailure(_mapFirebaseError(e.code, e.message));
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('🔐 PhlakesFabric | getRedirectResult: $e');
+        debugPrint(
+            '🔐 PhlakesFabric | getRedirectResult unknown: $e');
       }
       return null;
     }
@@ -108,20 +137,14 @@ class FirebaseAuthService {
 
   // ── Google Sign-In ─────────────────────────────────────────────────────────
   //
-  // WEB STRATEGY — signInWithPopup with authStateChanges fallback:
+  // WEB: signInWithRedirect
+  //   Now that the Google Cloud Console has been updated to allow
+  //   https://phlakesfabric.web.app/__/auth/handler as a redirect URI,
+  //   the redirect will return to web.app (same origin as the app).
+  //   getRedirectResultIfAny() in main() will then successfully consume
+  //   the credential before the app renders anything.
   //
-  //   Flutter Web's signInWithRedirect always routes through
-  //   firebaseapp.com/__/auth/handler regardless of your authDomain
-  //   setting. When the browser returns to web.app, the credential
-  //   written to sessionStorage at firebaseapp.com is inaccessible
-  //   (different origin → browser blocks it). Sign-in silently fails.
-  //
-  //   signInWithPopup keeps everything in the SAME browser tab origin.
-  //   The popup opens, OAuth completes, the credential is handed back
-  //   directly to the Flutter app — no cross-origin sessionStorage issue.
-  //
-  //   The popup may be blocked by some mobile browsers. We handle that
-  //   with a clear user-facing message and a fallback path.
+  // ANDROID: google_sign_in package + credential exchange
   Future<User?> signInWithGoogle() async {
     try {
       if (kDebugMode) {
@@ -130,13 +153,11 @@ class FirebaseAuthService {
             '(kIsWeb=$kIsWeb)');
       }
 
-      // ── WEB: signInWithPopup ────────────────────────────────────
       if (kIsWeb) {
-        return await _signInWithGooglePopupWeb();
+        return await _googleSignInWeb();
       }
 
-      // ── ANDROID: google_sign_in package ────────────────────────
-      return await _signInWithGoogleAndroid();
+      return await _googleSignInAndroid();
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) {
         debugPrint(
@@ -154,103 +175,38 @@ class FirebaseAuthService {
     } catch (e) {
       if (e is AuthFailure) rethrow;
       if (kDebugMode) {
-        debugPrint('🔐 PhlakesFabric | Unknown error: $e');
+        debugPrint('🔐 PhlakesFabric | Unknown: $e');
       }
-      throw AuthFailure('Google Sign-In failed. Please try again.');
+      throw AuthFailure(
+          'Google Sign-In failed. Please try again.');
     }
   }
 
-  // ── Web popup implementation ──────────────────────────────────────────────
-  Future<User?> _signInWithGooglePopupWeb() async {
+  // ── Web: redirect flow ────────────────────────────────────────────────────
+  Future<User?> _googleSignInWeb() async {
     final provider = GoogleAuthProvider();
     provider.setCustomParameters({'prompt': 'select_account'});
     provider.addScope('email');
     provider.addScope('profile');
 
-    try {
-      // Attempt 1: popup
-      if (kDebugMode) {
-        debugPrint(
-            '🔐 PhlakesFabric | Web: trying signInWithPopup…');
-      }
-
-      final userCredential =
-          await _firebaseAuth.signInWithPopup(provider);
-
-      final user = userCredential.user;
-      if (user == null) {
-        throw AuthFailure(
-            'Google sign-in failed. Please try again.');
-      }
-
-      if (kDebugMode) {
-        debugPrint(
-            '🔐 PhlakesFabric | Popup success uid=${user.uid}');
-      }
-
-      try {
-        await FcmService.instance.syncTokenForCurrentUser();
-      } catch (_) {}
-
-      return user;
-    } on FirebaseAuthException catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-            '🔐 PhlakesFabric | Popup FirebaseAuthException: '
-            'code=${e.code}');
-      }
-
-      // popup-blocked or popup-closed — these are expected on some
-      // mobile browsers (Samsung Internet, in-app browsers, etc.)
-      if (e.code == 'popup-blocked') {
-        throw AuthFailure(
-          'Pop-up blocked by your browser.\n\n'
-          'Please allow pop-ups for phlakesfabric.web.app '
-          'in your browser settings, then try again.\n\n'
-          'On Chrome: tap the address bar → "Pop-ups blocked" → Allow.',
-        );
-      }
-
-      if (e.code == 'popup-closed-by-user' ||
-          e.code == 'cancelled-popup-request') {
-        throw AuthFailure('Google sign-in was cancelled.');
-      }
-
-      // web-context-cancelled fires on some mobile browsers when the
-      // popup opens a new tab instead of a floating window and the
-      // user is returned. In that case, check authStateChanges —
-      // Firebase may have already signed the user in.
-      if (e.code == 'web-context-cancelled' ||
-          e.code == 'web-context-already-presented') {
-        if (kDebugMode) {
-          debugPrint(
-              '🔐 PhlakesFabric | web-context issue — '
-              'checking currentUser as fallback…');
-        }
-        // Give Firebase a moment to settle
-        await Future.delayed(const Duration(milliseconds: 800));
-        final fallbackUser = _firebaseAuth.currentUser;
-        if (fallbackUser != null) {
-          if (kDebugMode) {
-            debugPrint(
-                '🔐 PhlakesFabric | Fallback success '
-                'uid=${fallbackUser.uid}');
-          }
-          try {
-            await FcmService.instance.syncTokenForCurrentUser();
-          } catch (_) {}
-          return fallbackUser;
-        }
-        throw AuthFailure(
-            'Google sign-in failed. Please try again.');
-      }
-
-      rethrow;
+    if (kDebugMode) {
+      debugPrint(
+          '🔐 PhlakesFabric | Web: calling signInWithRedirect…\n'
+          '  authDomain will handle redirect at:\n'
+          '  https://phlakesfabric.web.app/__/auth/handler');
     }
+
+    // Browser navigates away here. Returns null — the result is
+    // consumed by getRedirectResultIfAny() called in main() on
+    // the next page load BEFORE runApp() is called.
+    await _firebaseAuth.signInWithRedirect(provider);
+
+    // Never reached in the same page lifecycle.
+    return null;
   }
 
-  // ── Android native implementation ─────────────────────────────────────────
-  Future<User?> _signInWithGoogleAndroid() async {
+  // ── Android: native flow ─────────────────────────────────────────────────
+  Future<User?> _googleSignInAndroid() async {
     final GoogleSignInAccount? googleUser =
         await _googleSignIn.signIn();
 
@@ -260,7 +216,7 @@ class FirebaseAuthService {
 
     if (kDebugMode) {
       debugPrint(
-          '🔐 PhlakesFabric | Android account selected: '
+          '🔐 PhlakesFabric | Android: account selected '
           '${googleUser.email}');
     }
 
@@ -270,7 +226,8 @@ class FirebaseAuthService {
     if ((googleAuth.idToken ?? '').isEmpty) {
       throw AuthFailure(
         'Google sign-in failed: no ID token returned. '
-        'Verify SHA-1 fingerprint in Firebase Console for com.pfb.app',
+        'Verify SHA-1 fingerprint in Firebase Console '
+        'for com.pfb.app',
       );
     }
 
@@ -284,7 +241,8 @@ class FirebaseAuthService {
     final user = userCredential.user;
 
     if (user == null) {
-      throw AuthFailure('Google sign-in failed. Please try again.');
+      throw AuthFailure(
+          'Google sign-in failed. Please try again.');
     }
 
     await FcmService.instance.syncTokenForCurrentUser();
@@ -312,7 +270,7 @@ class FirebaseAuthService {
     await _firebaseAuth.signOut();
 
     if (kDebugMode) {
-      debugPrint('🔐 PhlakesFabric | User signed out');
+      debugPrint('🔐 PhlakesFabric | Signed out');
     }
   }
 
@@ -329,7 +287,7 @@ class FirebaseAuthService {
           'Verify SHA-1 fingerprint in Firebase Console.';
     }
     if (combined.contains('network_error')) {
-      return 'Network error. Please check your internet connection.';
+      return 'Network error. Please check your internet.';
     }
     if (combined.contains('sign_in_canceled') ||
         combined.contains('canceled') ||
@@ -337,16 +295,15 @@ class FirebaseAuthService {
       return 'Google sign-in was cancelled.';
     }
     if (combined.contains('12500')) {
-      return 'OAuth configuration error. '
-          'Verify SHA fingerprints in Firebase Console.';
+      return 'OAuth error. Verify SHA fingerprints.';
     }
     if (combined.contains('12501')) {
       return 'Google sign-in was cancelled.';
     }
     if (combined.contains('12502')) {
-      return 'Google sign-in is in progress. Please wait.';
+      return 'Google sign-in in progress. Please wait.';
     }
-    return 'Google Sign-In failed. Error: ${e.message}';
+    return 'Google Sign-In failed: ${e.message}';
   }
 
   String _mapFirebaseError(String code, String? message) {
@@ -377,7 +334,7 @@ class FirebaseAuthService {
       case 'cancelled-popup-request':
         return 'Google sign-in was cancelled.';
       case 'popup-blocked':
-        return 'Pop-up blocked. Please allow pop-ups and try again.';
+        return 'Pop-up blocked. Allow pop-ups and try again.';
       default:
         return message ?? 'Authentication failed. Please try again.';
     }

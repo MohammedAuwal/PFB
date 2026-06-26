@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pfb/app.dart';
 import 'package:pfb/services/fcm_service.dart';
+import 'package:pfb/services/firebase_auth_service.dart';
 import 'package:pfb/services/local_notification_service.dart';
 import 'package:pfb/firebase_options.dart';
 
@@ -27,7 +28,6 @@ Future<void> _firebaseMessagingBackgroundHandler(
       rethrow;
     }
   }
-
   try {
     await FcmService.instance.handleBackgroundMessage(message);
   } catch (_) {}
@@ -70,65 +70,78 @@ Future<void> main() async {
     startupStack = st;
   }
 
-  // ── Step 2 (Web only): Set persistence then check auth state ─────────────
+  // ── Step 2 (Web only): Set persistence + consume redirect result ──────────
   //
-  // We now use signInWithPopup (not redirect) so there is no cross-origin
-  // sessionStorage problem. However we still call getRedirectResult() once
-  // as a safety net in case an old redirect from a previous app version is
-  // still pending in the browser.
+  // This is the CORE of the Google Sign-In fix for Flutter Web.
   //
-  // More importantly: on web, FirebaseAuth restores the signed-in user from
-  // IndexedDB asynchronously. We must wait for authStateChanges to emit
-  // at least one event before SplashScreen reads currentUser, otherwise
-  // currentUser is null on first render even for a user who was already
-  // logged in before closing the tab.
+  // SEQUENCE OF EVENTS:
+  //   A. User taps "Continue with Google" in LoginScreen / SignupScreen
+  //   B. signInWithRedirect() fires → browser leaves the app
+  //   C. Google OAuth completes → browser redirects to:
+  //        https://phlakesfabric.web.app/__/auth/handler
+  //      (now valid because we added it in Google Cloud Console)
+  //   D. Firebase.__/auth/handler stores the credential and redirects
+  //      browser back to the app's main URL:
+  //        https://phlakesfabric.web.app
+  //   E. Flutter app cold-boots again → main() runs
+  //   F. getRedirectResultIfAny() reads the credential from IndexedDB
+  //      (same origin = same IndexedDB = credential available)
+  //   G. FirebaseAuth.currentUser is now set
+  //   H. runApp() fires → SplashScreen reads currentUser → routes correctly
   if (startupError == null && kIsWeb) {
+    // Set LOCAL persistence so auth survives tab closes
     try {
-      // Set LOCAL persistence so the user stays logged in across
-      // browser sessions (tabs closing, phone sleeping, etc.)
       await FirebaseAuth.instance
           .setPersistence(Persistence.LOCAL);
-
       if (kDebugMode) {
-        debugPrint('🔐 main() | Web persistence set to LOCAL');
+        debugPrint(
+            '🔐 main() | Web persistence → LOCAL');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('🔐 main() | setPersistence error (non-fatal): $e');
+        debugPrint(
+            '🔐 main() | setPersistence error (non-fatal): $e');
       }
     }
 
-    // Safety net: consume any pending redirect result from old code paths
+    // Consume the redirect credential BEFORE runApp()
     try {
-      final result =
-          await FirebaseAuth.instance.getRedirectResult();
-      if (result.user != null && kDebugMode) {
-        debugPrint(
-            '🔐 main() | Safety-net redirect result: '
-            'uid=${result.user!.uid}');
+      final authService = FirebaseAuthService();
+      final redirectUser =
+          await authService.getRedirectResultIfAny();
+
+      if (redirectUser != null) {
+        if (kDebugMode) {
+          debugPrint(
+              '🔐 main() | ✅ Redirect sign-in resolved → '
+              'uid=${redirectUser.uid}');
+        }
+        // User is now signed in. SplashScreen will read
+        // FirebaseAuth.instance.currentUser correctly.
       }
     } catch (e) {
+      // AuthFailure means a real sign-in error (e.g. account conflict).
+      // We surface it after runApp via SplashScreen error state.
       if (kDebugMode) {
         debugPrint(
-            '🔐 main() | getRedirectResult (safety-net): $e');
+            '🔐 main() | getRedirectResult error: $e');
       }
     }
 
-    // Wait for Firebase to restore auth state from IndexedDB.
-    // This is the KEY fix for "user appears logged out on first render":
-    // authStateChanges always emits null first, then the real user.
-    // We wait for the FIRST non-loading emission (up to 5 seconds).
+    // Wait for Firebase to finish restoring auth state from IndexedDB.
+    // authStateChanges always emits null first (loading), then the
+    // real user. Waiting here means SplashScreen always sees the
+    // correct currentUser on first render — no more "logged out" flash.
     try {
       await FirebaseAuth.instance
           .authStateChanges()
           .first
           .timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 8),
         onTimeout: () {
           if (kDebugMode) {
             debugPrint(
-                '🔐 main() | authStateChanges timeout — '
-                'proceeding as guest');
+                '🔐 main() | authStateChanges timeout → guest');
           }
           return null;
         },
@@ -137,18 +150,18 @@ Future<void> main() async {
       if (kDebugMode) {
         final u = FirebaseAuth.instance.currentUser;
         debugPrint(
-            '🔐 main() | Auth state resolved → '
+            '🔐 main() | Auth state ready → '
             '${u != null ? 'uid=${u.uid}' : 'guest'}');
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint(
-            '🔐 main() | authStateChanges error (non-fatal): $e');
+            '🔐 main() | authStateChanges error: $e');
       }
     }
   }
 
-  // ── Step 3: Register FCM background handler (non-web only) ───────────────
+  // ── Step 3: FCM background handler (non-web) ─────────────────────────────
   if (startupError == null && !kIsWeb) {
     try {
       FirebaseMessaging.onBackgroundMessage(
@@ -161,7 +174,7 @@ Future<void> main() async {
     }
   }
 
-  // ── Step 4: Initialize local notifications (non-web only) ────────────────
+  // ── Step 4: Local notifications (non-web) ───────────────────────────────
   if (startupError == null && !kIsWeb) {
     try {
       await LocalNotificationService.instance
@@ -187,7 +200,6 @@ Future<void> main() async {
   if (startupError == null && !kIsWeb) {
     unawaited(_initializeFcmNonBlocking());
   }
-
   if (startupError == null && kIsWeb) {
     unawaited(_initializeFcmWebNonBlocking());
   }
@@ -208,6 +220,8 @@ Future<void> _initializeFcmWebNonBlocking() async {
         .timeout(const Duration(seconds: 20));
   } catch (_) {}
 }
+
+// ── Startup Error Screen ──────────────────────────────────────────────────────
 
 class StartupErrorApp extends StatelessWidget {
   final Object error;

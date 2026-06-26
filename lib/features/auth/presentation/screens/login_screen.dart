@@ -1,6 +1,4 @@
-import 'dart:async';
-
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/config/routes/route_names.dart';
@@ -19,37 +17,23 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final FirebaseAuthService _authService    = FirebaseAuthService();
-  final FirebaseService     _firebaseService = FirebaseService();
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirebaseService _firebaseService = FirebaseService();
 
-  final _emailCtrl    = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
-  bool _loading        = false;
-  bool _googleLoading  = false;
+  bool _loading = false;
+  bool _googleLoading = false;
   bool _obscurePassword = true;
-  bool _navigating     = false;
 
-  StreamSubscription<User?>? _authSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // ── Auth state safety net ──────────────────────────────────────────────
-    //  If Firebase Auth updates the current user at any point while this
-    //  screen is visible (e.g. ghost-success after a popup error, or the
-    //  splash screen missed a persisted session), navigate automatically.
-    _authSubscription = _authService.authStateChanges.listen((user) {
-      if (user != null && mounted && !_navigating) {
-        _goAfterLogin();
-      }
-    });
-  }
+  // ── NEW: track that a web redirect was initiated ──────────────────────────
+  // Once signInWithRedirect fires the browser navigates away, so we just
+  // show a "Redirecting to Google…" indicator and do nothing else.
+  bool _redirectingToGoogle = false;
 
   Future<void> _goAfterLogin() async {
-    if (_navigating || !mounted) return;
-    _navigating = true;
+    if (!mounted) return;
 
     try {
       await _firebaseService.ensureUserProfile();
@@ -78,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    final email    = _emailCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
@@ -92,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final user = await _authService.signInWithEmailPassword(
-        email:    email,
+        email: email,
         password: password,
       );
 
@@ -104,8 +88,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:         Text('$e'),
-          backgroundColor: AppTheme.colorsOf(context).error.withOpacity(0.9),
+          content: Text('$e'),
+          backgroundColor:
+              AppTheme.colorsOf(context).error.withOpacity(0.9),
         ),
       );
     } finally {
@@ -119,6 +104,22 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await _authService.signInWithGoogle();
 
+      // ── Web: signInWithGoogle() calls signInWithRedirect() which
+      // navigates the browser away and returns null.  We simply flip the
+      // UI to a "Redirecting…" state.  The result is handled in
+      // SplashScreen.getRedirectResultIfAny() after the browser returns.
+      if (kIsWeb && user == null) {
+        if (mounted) {
+          setState(() {
+            _googleLoading = false;
+            _redirectingToGoogle = true;
+          });
+        }
+        // Browser is about to navigate away – nothing else to do here.
+        return;
+      }
+
+      // ── Android: user is non-null on success.
       if (user == null) {
         throw AuthFailure('Google sign-in did not complete.');
       }
@@ -129,8 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:         Text('$e'),
-          backgroundColor: AppTheme.colorsOf(context).error.withOpacity(0.9),
+          content: Text('$e'),
+          backgroundColor:
+              AppTheme.colorsOf(context).error.withOpacity(0.9),
         ),
       );
     } finally {
@@ -148,7 +150,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _authSubscription?.cancel();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
@@ -157,7 +158,31 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
-    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // ── NEW: While waiting for the Google redirect, show a full-screen
+    // loading overlay so the user doesn't see a broken/empty login form.
+    if (_redirectingToGoogle) {
+      return Scaffold(
+        backgroundColor: colors.scaffold,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppPalette.primary),
+              const SizedBox(height: 20),
+              Text(
+                'Redirecting to Google…',
+                style: GoogleFonts.poppins(
+                  color: colors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Container(
@@ -175,16 +200,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     colors.scaffold,
                   ],
             begin: Alignment.topCenter,
-            end:   Alignment.bottomCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: Stack(
           children: [
+            // ── Background Gold Glow Circles ─────────────────────
             Positioned(
-              top:  -90,
+              top: -90,
               left: -80,
               child: Container(
-                width:  290,
+                width: 290,
                 height: 290,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -193,10 +219,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color:       AppPalette.primary.withOpacity(
+                      color: AppPalette.primary.withOpacity(
                         isDark ? 0.12 : 0.08,
                       ),
-                      blurRadius:  90,
+                      blurRadius: 90,
                       spreadRadius: 30,
                     ),
                   ],
@@ -204,10 +230,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             Positioned(
-              top:   180,
+              top: 180,
               right: -40,
               child: Container(
-                width:  190,
+                width: 190,
                 height: 190,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -216,10 +242,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color:       AppPalette.primary.withOpacity(
+                      color: AppPalette.primary.withOpacity(
                         isDark ? 0.08 : 0.06,
                       ),
-                      blurRadius:  80,
+                      blurRadius: 80,
                       spreadRadius: 18,
                     ),
                   ],
@@ -228,9 +254,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             Positioned(
               bottom: -70,
-              right:  -40,
+              right: -40,
               child: Container(
-                width:  250,
+                width: 250,
                 height: 250,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -239,8 +265,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color:       AppPalette.secondary.withOpacity(0.10),
-                      blurRadius:  100,
+                      color: AppPalette.secondary.withOpacity(0.10),
+                      blurRadius: 100,
                       spreadRadius: 20,
                     ),
                   ],
@@ -248,6 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
+            // ── Content ───────────────────────────────────────────
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -273,26 +300,24 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: colors.card.withOpacity(
                                 isDark ? 0.90 : 0.85,
                               ),
-                              borderRadius:
-                                  BorderRadius.circular(28),
+                              borderRadius: BorderRadius.circular(28),
                               border: Border.all(
-                                color: AppPalette.primary
-                                    .withOpacity(
+                                color: AppPalette.primary.withOpacity(
                                   isDark ? 0.25 : 0.15,
                                 ),
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color:      colors.shadow,
+                                  color: colors.shadow,
                                   blurRadius: 24,
-                                  offset:     const Offset(0, 10),
+                                  offset: const Offset(0, 10),
                                 ),
                                 if (isDark)
                                   BoxShadow(
-                                    color:      AppPalette.primary
+                                    color: AppPalette.primary
                                         .withOpacity(0.06),
                                     blurRadius: 40,
-                                    offset:     Offset.zero,
+                                    offset: Offset.zero,
                                   ),
                               ],
                             ),
@@ -303,8 +328,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Text(
                                   'Welcome back',
                                   style: GoogleFonts.poppins(
-                                    color:      colors.textPrimary,
-                                    fontSize:   22,
+                                    color: colors.textPrimary,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -314,25 +339,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ? 'Sign in to continue your Phlakes Fabrics experience.'
                                       : 'Sign in to continue where you stopped.',
                                   style: GoogleFonts.poppins(
-                                    color:   colors.textSecondary,
+                                    color: colors.textSecondary,
                                     fontSize: 13,
-                                    height:   1.5,
+                                    height: 1.5,
                                   ),
                                 ),
                                 const SizedBox(height: 22),
 
                                 _GlassField(
-                                  controller:  _emailCtrl,
-                                  hint:        'Email address',
-                                  icon:        Icons.email_outlined,
+                                  controller: _emailCtrl,
+                                  hint: 'Email address',
+                                  icon: Icons.email_outlined,
                                   keyboardType:
                                       TextInputType.emailAddress,
                                 ),
                                 const SizedBox(height: 14),
                                 _GlassField(
-                                  controller:  _passwordCtrl,
-                                  hint:        'Password',
-                                  icon:        Icons.lock_outline_rounded,
+                                  controller: _passwordCtrl,
+                                  hint: 'Password',
+                                  icon: Icons.lock_outline_rounded,
                                   obscureText: _obscurePassword,
                                   suffix: IconButton(
                                     onPressed: () => setState(() =>
@@ -349,8 +374,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 20),
 
+                                // Sign In Button
                                 SizedBox(
-                                  width:  double.infinity,
+                                  width: double.infinity,
                                   height: 58,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
@@ -372,8 +398,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 color: AppPalette.primary
                                                     .withOpacity(0.40),
                                                 blurRadius: 16,
-                                                offset: const Offset(
-                                                    0, 6),
+                                                offset:
+                                                    const Offset(0, 6),
                                               ),
                                             ],
                                     ),
@@ -383,37 +409,34 @@ class _LoginScreenState extends State<LoginScreen> {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
                                             Colors.transparent,
-                                        shadowColor:
-                                            Colors.transparent,
+                                        shadowColor: Colors.transparent,
                                         foregroundColor:
                                             AppPalette.secondary,
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(
-                                                  16),
+                                              BorderRadius.circular(16),
                                         ),
                                       ),
                                       child: _loading
                                           ? SizedBox(
-                                              width:  22,
+                                              width: 22,
                                               height: 22,
                                               child:
                                                   CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                color: AppPalette
-                                                    .secondary,
+                                                color:
+                                                    AppPalette.secondary,
                                               ),
                                             )
                                           : Text(
                                               'Sign In',
-                                              style:
-                                                  GoogleFonts.poppins(
+                                              style: GoogleFonts.poppins(
                                                 fontWeight:
                                                     FontWeight.w800,
                                                 fontSize: 16,
                                                 letterSpacing: 0.5,
-                                                color: AppPalette
-                                                    .secondary,
+                                                color:
+                                                    AppPalette.secondary,
                                               ),
                                             ),
                                     ),
@@ -421,6 +444,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 20),
 
+                                // Divider
                                 Row(
                                   children: [
                                     Expanded(
@@ -438,13 +462,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     ),
                                     Padding(
-                                      padding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 16),
+                                      padding: const EdgeInsets
+                                          .symmetric(horizontal: 16),
                                       child: Text(
                                         'or',
                                         style: GoogleFonts.poppins(
-                                          color:   colors.textSecondary,
+                                          color: colors.textSecondary,
                                           fontSize: 13,
                                         ),
                                       ),
@@ -467,8 +490,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 20),
 
+                                // Google Button
                                 SizedBox(
-                                  width:  double.infinity,
+                                  width: double.infinity,
                                   height: 58,
                                   child: OutlinedButton(
                                     onPressed: _googleLoading
@@ -476,8 +500,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         : _loginWithGoogle,
                                     style: OutlinedButton.styleFrom(
                                       backgroundColor:
-                                          colors.surface.withOpacity(
-                                              0.5),
+                                          colors.surface.withOpacity(0.5),
                                       side: BorderSide(
                                         color: AppPalette.primary
                                             .withOpacity(
@@ -492,7 +515,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     child: _googleLoading
                                         ? SizedBox(
-                                            width:  22,
+                                            width: 22,
                                             height: 22,
                                             child:
                                                 CircularProgressIndicator(
@@ -502,22 +525,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                           )
                                         : Row(
                                             mainAxisAlignment:
-                                                MainAxisAlignment
-                                                    .center,
+                                                MainAxisAlignment.center,
                                             children: [
                                               Image.network(
                                                 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                                width:  22,
+                                                width: 22,
                                                 height: 22,
                                                 errorBuilder:
-                                                    (_, __, ___) =>
-                                                        Text(
+                                                    (_, __, ___) => Text(
                                                   'G',
                                                   style:
                                                       GoogleFonts.poppins(
                                                     color:
                                                         colors.textPrimary,
-                                                    fontSize:   20,
+                                                    fontSize: 20,
                                                     fontWeight:
                                                         FontWeight.w700,
                                                   ),
@@ -526,8 +547,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                               const SizedBox(width: 12),
                                               Text(
                                                 'Continue with Google',
-                                                style:
-                                                    GoogleFonts.poppins(
+                                                style: GoogleFonts.poppins(
                                                   color:
                                                       colors.textPrimary,
                                                   fontWeight:
@@ -541,13 +561,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 24),
 
+                                // Sign up link
                                 Center(
                                   child: Column(
                                     children: [
                                       Text(
                                         'New here?',
                                         style: GoogleFonts.poppins(
-                                          color:   colors.textSecondary,
+                                          color: colors.textSecondary,
                                           fontSize: 13,
                                         ),
                                       ),
@@ -558,7 +579,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           'Create an account',
                                           style: GoogleFonts.poppins(
                                             color: AppPalette.primary,
-                                            fontSize:   16,
+                                            fontSize: 16,
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
@@ -575,7 +596,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'By continuing, you agree to our Terms & Privacy Policy.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
-                              color:   colors.textSecondary,
+                              color: colors.textSecondary,
                               fontSize: 12.5,
                             ),
                           ),
@@ -585,9 +606,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text(
                               'Continue as Guest',
                               style: GoogleFonts.poppins(
-                                color:      colors.textPrimary,
+                                color: colors.textPrimary,
                                 fontWeight: FontWeight.w600,
-                                fontSize:   13.5,
+                                fontSize: 13.5,
                               ),
                             ),
                           ),
@@ -608,7 +629,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       children: [
         Container(
-          width:  80,
+          width: 80,
           height: 80,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -618,17 +639,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 AppPalette.primaryLight,
               ],
               begin: Alignment.topLeft,
-              end:   Alignment.bottomRight,
+              end: Alignment.bottomRight,
             ),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color:       AppPalette.primary.withOpacity(
+                color: AppPalette.primary.withOpacity(
                   isDark ? 0.55 : 0.35,
                 ),
-                blurRadius:  24,
+                blurRadius: 24,
                 spreadRadius: 2,
-                offset:      const Offset(0, 8),
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -636,23 +657,22 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Text(
               'PF',
               style: GoogleFonts.cinzel(
-                color:         AppPalette.secondary,
-                fontSize:      26,
-                fontWeight:    FontWeight.w900,
+                color: AppPalette.secondary,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
                 letterSpacing: 2,
               ),
             ),
           ),
         ),
         const SizedBox(height: 20),
-
         Column(
           children: [
             Text(
               'PHLAKES',
               style: GoogleFonts.cinzel(
-                color:      isDark ? Colors.white : AppPalette.secondary,
-                fontSize:   26,
+                color: isDark ? Colors.white : AppPalette.secondary,
+                fontSize: 26,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 3,
               ),
@@ -668,8 +688,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Text(
                 'FABRICS',
                 style: GoogleFonts.cinzel(
-                  color:      Colors.white,
-                  fontSize:   20,
+                  color: Colors.white,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 6,
                 ),
@@ -678,9 +698,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         const SizedBox(height: 8),
-
         Container(
-          width:  60,
+          width: 60,
           height: 2,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -696,9 +715,9 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           'Luxury African Fabrics & Textiles',
           style: GoogleFonts.poppins(
-            color:      colors.textSecondary,
-            fontSize:   13,
-            fontStyle:  FontStyle.italic,
+            color: colors.textSecondary,
+            fontSize: 13,
+            fontStyle: FontStyle.italic,
             letterSpacing: 0.3,
           ),
         ),
@@ -710,10 +729,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Text(
             'Quality you can feel.',
             style: GoogleFonts.poppins(
-              color:      Colors.white,
-              fontSize:   12,
+              color: Colors.white,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
-              fontStyle:  FontStyle.italic,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ),
@@ -722,19 +741,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+// ── Glass Field ────────────────────────────────────────────────────────────────
+
 class _GlassField extends StatelessWidget {
   final TextEditingController controller;
-  final String      hint;
-  final IconData    icon;
-  final bool        obscureText;
-  final Widget?     suffix;
+  final String hint;
+  final IconData icon;
+  final bool obscureText;
+  final Widget? suffix;
   final TextInputType? keyboardType;
 
   const _GlassField({
     required this.controller,
     required this.hint,
     required this.icon,
-    this.obscureText  = false,
+    this.obscureText = false,
     this.suffix,
     this.keyboardType,
   });
@@ -742,51 +763,52 @@ class _GlassField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
-    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Material(
       color: Colors.transparent,
       child: Container(
         height: 64,
         decoration: BoxDecoration(
-          color:        colors.surface.withOpacity(isDark ? 0.80 : 0.75),
+          color: colors.surface.withOpacity(isDark ? 0.80 : 0.75),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppPalette.primary.withOpacity(isDark ? 0.20 : 0.12),
+            color:
+                AppPalette.primary.withOpacity(isDark ? 0.20 : 0.12),
           ),
         ),
         child: TextField(
-          controller:   controller,
-          obscureText:  obscureText,
+          controller: controller,
+          obscureText: obscureText,
           keyboardType: keyboardType,
-          cursorColor:  AppPalette.primary,
+          cursorColor: AppPalette.primary,
           style: GoogleFonts.poppins(
-            color:    colors.textPrimary,
+            color: colors.textPrimary,
             fontSize: 15,
           ),
           decoration: InputDecoration(
-            filled:    false,
+            filled: false,
             fillColor: Colors.transparent,
-            hintText:  hint,
+            hintText: hint,
             hintStyle: GoogleFonts.poppins(
-              color:    colors.textSecondary,
+              color: colors.textSecondary,
               fontSize: 15,
             ),
             prefixIcon: Icon(
               icon,
               color: AppPalette.primary.withOpacity(0.70),
-              size:  22,
+              size: 22,
             ),
             suffixIcon: suffix,
-            border:            InputBorder.none,
-            enabledBorder:     InputBorder.none,
-            focusedBorder:     InputBorder.none,
-            disabledBorder:    InputBorder.none,
-            errorBorder:       InputBorder.none,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
             focusedErrorBorder: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 8,
-              vertical:   20,
+              vertical: 20,
             ),
           ),
         ),

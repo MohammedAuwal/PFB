@@ -159,25 +159,24 @@ class FirebaseAuthService {
         );
       }
 
-      UserCredential userCredential;
-
       // ── WEB: Use redirect flow (reliable on all browsers) ────────────────
       //  signInWithRedirect navigates the entire page to Google.
-      //  When the user returns, [handleRedirectResult] (called during
-      //  bootstrap in the splash screen) processes the credential.
-      //  The code below the await will NOT execute in the normal case
-      //  because the browser navigates away.
+      //  It returns void because the current page context is destroyed.
+      //  When the user returns, handleRedirectResult() (called during
+      //  bootstrap in the splash screen) processes the credential via
+      //  getRedirectResult().
       if (kIsWeb) {
         final provider = GoogleAuthProvider();
         provider.setCustomParameters({'prompt': 'select_account'});
         provider.addScope('email');
         provider.addScope('profile');
 
-        userCredential =
-            await _firebaseAuth.signInWithRedirect(provider);
+        // This returns void — the browser navigates away.
+        await _firebaseAuth.signInWithRedirect(provider);
 
-        // If we reach here the redirect didn't navigate away (rare).
-        final user = userCredential.user;
+        // If we reach here the redirect didn't navigate away (rare edge
+        // case). Check currentUser as a fallback.
+        final user = _firebaseAuth.currentUser;
         if (user != null) {
           await FcmService.instance.syncTokenForCurrentUser();
           if (kDebugMode) {
@@ -229,24 +228,24 @@ class FirebaseAuthService {
           idToken: googleAuth.idToken,
         );
 
-        userCredential =
+        final userCredential =
             await _firebaseAuth.signInWithCredential(credential);
+
+        final user = userCredential.user;
+        if (user == null) {
+          throw AuthFailure('Google sign-in failed. Please try again.');
+        }
+
+        await FcmService.instance.syncTokenForCurrentUser();
+
+        if (kDebugMode) {
+          debugPrint(
+            '🔐 Phlakes Fabric | Google Sign-In: success uid=${user.uid}',
+          );
+        }
+
+        return user;
       }
-
-      final user = userCredential.user;
-      if (user == null) {
-        throw AuthFailure('Google sign-in failed. Please try again.');
-      }
-
-      await FcmService.instance.syncTokenForCurrentUser();
-
-      if (kDebugMode) {
-        debugPrint(
-          '🔐 Phlakes Fabric | Google Sign-In: success uid=${user.uid}',
-        );
-      }
-
-      return user;
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) {
         debugPrint(

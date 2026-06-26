@@ -65,18 +65,25 @@ jobs:
       - name: Build Web
         run: flutter build web --release
 
-      # ── Cache-bust: ensures every deploy has a unique file so Firebase ──
-      # ── Hosting never rejects it as "the current active version" ────────
+      # ── Cache-bust: ensures every deploy has a unique file ──────────────
       - name: Inject build version
         run: |
           BUILD_VERSION="build-${{ github.run_number }}-$(date +%s)"
           echo "$BUILD_VERSION" > build/web/version.txt
           echo "✅ Injected $BUILD_VERSION into build/web/version.txt"
 
+      # ── Deploy directly with firebase-tools (avoids action-hosting-deploy ──
+      # ── bug that falsely reports "current active version" on live channel) ──
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
-          channelId: live
-          projectId: phlakesfabric
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          # Write service account credentials to a temp file
+          printenv FIREBASE_SERVICE_ACCOUNT_JSON > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+
+          # Deploy
+          npx firebase-tools@latest deploy --only hosting --project phlakesfabric
+
+          # Cleanup credentials
+          rm -f "$RUNNER_TEMP/firebase-sa.json"

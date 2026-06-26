@@ -56,11 +56,22 @@ jobs:
 
           ls -la assets || true
 
+      - name: Clean previous build
+        run: flutter clean
+
       - name: Install Dependencies
         run: flutter pub get
 
       - name: Build Web
         run: flutter build web --release
+
+      # ── Cache-bust: ensures every deploy has a unique file so Firebase ──
+      # ── Hosting never rejects it as "the current active version" ────────
+      - name: Inject build version
+        run: |
+          BUILD_VERSION="build-${{ github.run_number }}-$(date +%s)"
+          echo "$BUILD_VERSION" > build/web/version.txt
+          echo "✅ Injected $BUILD_VERSION into build/web/version.txt"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -69,4 +80,3 @@ jobs:
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
           channelId: live
           projectId: phlakesfabric
-          firebaseHostingSite: Phlakesfabric

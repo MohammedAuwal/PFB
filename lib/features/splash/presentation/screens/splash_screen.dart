@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -132,13 +133,46 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // AUTH STATE RESOLUTION
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /// Resolves the current Firebase Auth user.
+  ///
+  /// On web, after a `signInWithRedirect`, the Firebase Auth SDK processes
+  /// the redirect result asynchronously.  Simply reading `currentUser` may
+  /// return `null` even though the sign-in succeeded, because the SDK
+  /// hasn't finished processing yet.
+  ///
+  /// `authStateChanges().first` waits for the SDK to finish initialisation
+  /// (including redirect processing) before emitting, so it always returns
+  /// the correct auth state.
+  Future<User?> _resolveCurrentUser() async {
+    if (!kIsWeb) {
+      return FirebaseAuth.instance.currentUser;
+    }
+
+    try {
+      return await FirebaseAuth.instance
+          .authStateChanges()
+          .first
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Timeout or error – fall back to synchronous check
+      return FirebaseAuth.instance.currentUser;
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // BOOTSTRAP
+  // ────────────────────────────────────────────────────────────────────────────
+
   Future<void> _bootstrap() async {
     final firebaseService = FirebaseService();
 
     // ── WEB: Process any pending Google Sign-In redirect result ──────────
-    //  After `signInWithRedirect` the browser navigates to Google and back.
-    //  When the app reloads, this call retrieves the credential so
-    //  `currentUser` is accurate for the checks below.
+    //  This also calls getRedirectResult() and waits for authStateChanges
+    //  internally, so by the time it completes the auth state is settled.
     if (kIsWeb) {
       try {
         final authService = FirebaseAuthService();
@@ -153,7 +187,11 @@ class _SplashScreenState extends State<SplashScreen>
     unawaited(firebaseService.seedDefaultAppSettingsSafely());
     unawaited(firebaseService.seedDefaultCategoriesIfMissingSafely());
 
-    final user = firebaseService.currentUser;
+    // ── Resolve the current user ─────────────────────────────────────────
+    //  On web this waits for authStateChanges().first, which guarantees
+    //  the redirect result has been fully processed before we decide
+    //  where to navigate.
+    final User? user = await _resolveCurrentUser();
 
     if (user != null) {
       unawaited(firebaseService.ensureUserProfileSafely());
@@ -203,7 +241,6 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         width:  double.infinity,
         height: double.infinity,
-        // Luxury background
         decoration: BoxDecoration(
           gradient: isDark
               ? const LinearGradient(
@@ -218,7 +255,7 @@ class _SplashScreenState extends State<SplashScreen>
               : const LinearGradient(
                   colors: [
                     Color(0xFFFAFAFA),
-                    Color(0xFFF5F0E8), // warm ivory bottom
+                    Color(0xFFF5F0E8),
                   ],
                   begin: Alignment.topCenter,
                   end:   Alignment.bottomCenter,
@@ -226,7 +263,6 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Stack(
           children: [
-            // ── Background gold glow ─────────────────────────────
             Positioned(
               top:  -60,
               left: -60,
@@ -292,7 +328,6 @@ class _SplashScreenState extends State<SplashScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Animated Gold Logo ───────────────────────────────────
         ScaleTransition(
           scale: _pulseAnimation,
           child: _PhlakesLogo(isDark: isDark),
@@ -300,7 +335,6 @@ class _SplashScreenState extends State<SplashScreen>
 
         const SizedBox(height: 32),
 
-        // ── Brand Name ───────────────────────────────────────────
         SlideTransition(
           position: _textSlideAnimation,
           child: Column(
@@ -314,7 +348,6 @@ class _SplashScreenState extends State<SplashScreen>
                   letterSpacing: 4,
                 ),
               ),
-              // Gold shimmer "FABRICS"
               AnimatedBuilder(
                 animation: _shimmerAnimation,
                 builder: (context, child) {
@@ -359,7 +392,6 @@ class _SplashScreenState extends State<SplashScreen>
                 },
               ),
               const SizedBox(height: 10),
-              // Gold divider
               Container(
                 width:  80,
                 height: 2,
@@ -411,7 +443,6 @@ class _SplashScreenState extends State<SplashScreen>
 
         const SizedBox(height: 40),
 
-        // ── Gold Loading Indicator ───────────────────────────────
         TweenAnimationBuilder<double>(
           tween:    Tween<double>(begin: 0.4, end: 1),
           duration: const Duration(milliseconds: 800),
@@ -519,7 +550,6 @@ class _PhlakesLogo extends StatelessWidget {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Outer glow ring
         Container(
           width:  140,
           height: 140,
@@ -536,7 +566,6 @@ class _PhlakesLogo extends StatelessWidget {
             ),
           ),
         ),
-        // Middle ring
         Container(
           width:  108,
           height: 108,
@@ -553,7 +582,6 @@ class _PhlakesLogo extends StatelessWidget {
             ),
           ),
         ),
-        // Inner gold circle with "PF"
         Container(
           width:  82,
           height: 82,
@@ -597,7 +625,6 @@ class _PhlakesLogo extends StatelessWidget {
             ),
           ),
         ),
-        // Dotted gold ring detail (top arc)
         Positioned(
           top: 6,
           child: Row(

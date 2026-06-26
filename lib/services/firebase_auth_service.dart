@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +20,6 @@ class FirebaseAuthService {
     GoogleSignIn? googleSignIn,
   })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
         _googleSignIn = googleSignIn ?? GoogleSignIn(
-          // ✅ Configure for Phlakes Fabric
           scopes: ['email', 'profile'],
           serverClientId: '1089917254734-tfkid7lmbe20tr9p6u459bvil8qssm7v.apps.googleusercontent.com',
         );
@@ -26,9 +27,6 @@ class FirebaseAuthService {
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
 
-  /// Error message from the last redirect sign-in attempt (web only).
-  /// The login page can read and display this, then call
-  /// [clearRedirectError] to clear it.
   static String? pendingRedirectError;
 
   User? get currentUser => _firebaseAuth.currentUser;
@@ -41,36 +39,94 @@ class FirebaseAuthService {
 
   /// Processes any pending redirect-based Google Sign-In result on web.
   ///
-  /// **MUST be called during app bootstrap** (e.g. splash screen) before
-  /// checking [currentUser].  On web, after `signInWithRedirect` navigates
-  /// the browser to Google and back, this method retrieves the credential
-  /// that Firebase Auth stored in the redirect callback URL.
+  /// **MUST be called during app bootstrap** (splash screen) before checking
+  /// [currentUser].  On web, after `signInWithRedirect` navigates the browser
+  /// to Google and back, this method ensures the credential is fully
+  /// processed before the app makes navigation decisions.
   ///
-  /// - If a redirect sign-in succeeded, the [User] is returned and FCM is
-  ///   synced.
-  /// - If there was no pending redirect (normal app launch), returns `null`.
-  /// - If the redirect sign-in failed, the error is stored in
-  ///   [pendingRedirectError] and `null` is returned (no exception thrown
-  ///   so bootstrap can continue to the login page).
+  /// It tries three strategies in order:
+  /// 1. `getRedirectResult()` — the official API for retrieving redirect
+  ///    sign-in credentials.
+  /// 2. `currentUser` — the SDK may have auto-processed the redirect.
+  /// 3. `authStateChanges().first` — waits for the auth state stream to
+  ///    emit, which guarantees the redirect result has been settled.
   Future<User?> handleRedirectResult() async {
     if (!kIsWeb) return null;
 
     try {
+      // ── Strategy 1: getRedirectResult() ───────────────────────────────
       final UserCredential? userCredential =
           await _firebaseAuth.getRedirectResult();
 
-      final user = userCredential?.user;
-
-      if (user != null) {
+      if (userCredential?.user != null) {
         await FcmService.instance.syncTokenForCurrentUser();
         if (kDebugMode) {
           debugPrint(
-            '🔐 Phlakes Fabric | Redirect result: success uid=${user.uid}',
+            '🔐 Phlakes Fabric | Redirect result (getRedirectResult): '
+            'success uid=${userCredential!.user!.uid}',
           );
         }
+        return userCredential!.user;
       }
 
-      return user;
+      // ── Strategy 2: currentUser fallback ──────────────────────────────
+      //  The SDK may have auto-processed the redirect without exposing it
+      //  through getRedirectResult().
+      if (_firebaseAuth.currentUser != null) {
+        await FcmService.instance.syncTokenForCurrentUser();
+        if (kDebugMode) {
+          debugPrint(
+            '🔐 Phlakes Fabric | Redirect result (currentUser): '
+            'success uid=${_firebaseAuth.currentUser!.uid}',
+          );
+        }
+        return _firebaseAuth.currentUser;
+      }
+
+      // ── Strategy 3: wait for authStateChanges ─────────────────────────
+      //  On some browsers / SDK versions, the redirect result is not yet
+      //  available synchronously.  authStateChanges() waits for the initial
+      //  auth state to be fully determined before emitting, so it will
+      //  reflect the signed-in user from the redirect once processed.
+      if (kDebugMode) {
+        debugPrint(
+          '🔐 Phlakes Fabric | Redirect result: waiting for '
+          'authStateChanges to settle…',
+        );
+      }
+
+      try {
+        final user = await _firebaseAuth.authStateChanges()
+            .first
+            .timeout(const Duration(seconds: 6));
+
+        if (user != null) {
+          await FcmService.instance.syncTokenForCurrentUser();
+          if (kDebugMode) {
+            debugPrint(
+              '🔐 Phlakes Fabric | Redirect result (authStateChanges): '
+              'success uid=${user.uid}',
+            );
+          }
+        } else {
+          if (kDebugMode) {
+            debugPrint(
+              '🔐 Phlakes Fabric | Redirect result: no user '
+              '(normal launch, no redirect pending)',
+            );
+          }
+        }
+
+        return user;
+      } on TimeoutException {
+        if (kDebugMode) {
+          debugPrint(
+            '🔐 Phlakes Fabric | Redirect result: authStateChanges '
+            'timed out, falling back to currentUser',
+          );
+        }
+        return _firebaseAuth.currentUser;
+      }
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) {
         debugPrint(
@@ -89,8 +145,6 @@ class FirebaseAuthService {
     }
   }
 
-  /// Clears [pendingRedirectError]. Call this from the login page after
-  /// displaying the error to the user.
   static void clearRedirectError() {
     pendingRedirectError = null;
   }
@@ -160,22 +214,19 @@ class FirebaseAuthService {
       }
 
       // ── WEB: Use redirect flow (reliable on all browsers) ────────────────
-      //  signInWithRedirect navigates the entire page to Google.
-      //  It returns void because the current page context is destroyed.
-      //  When the user returns, handleRedirectResult() (called during
-      //  bootstrap in the splash screen) processes the credential via
-      //  getRedirectResult().
       if (kIsWeb) {
         final provider = GoogleAuthProvider();
         provider.setCustomParameters({'prompt': 'select_account'});
         provider.addScope('email');
         provider.addScope('profile');
 
-        // This returns void — the browser navigates away.
+        // signInWithRedirect navigates the entire page to Google.
+        // It returns void because the current page context is destroyed.
+        // When the user returns, handleRedirectResult() (called during
+        // bootstrap in the splash screen) processes the credential.
         await _firebaseAuth.signInWithRedirect(provider);
 
-        // If we reach here the redirect didn't navigate away (rare edge
-        // case). Check currentUser as a fallback.
+        // If we reach here the redirect didn't navigate away (rare).
         final user = _firebaseAuth.currentUser;
         if (user != null) {
           await FcmService.instance.syncTokenForCurrentUser();

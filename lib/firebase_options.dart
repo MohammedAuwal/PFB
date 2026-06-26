@@ -27,7 +27,7 @@ class DefaultFirebaseOptions {
   // From: phlakesfabric.web.app / phlakesfabric.firebaseapp.com
   static const FirebaseOptions web = FirebaseOptions(
     apiKey:            'AIzaSyC-wnlmBUr8c1kny07uB5jGqdwGq5-GIDc',
-    appId:             '1:1089917254734:web::2a98e9d43bf45e964a571f',
+    appId:             '1:1089917254734:web:2a98e9d43bf45e964a571f',
     messagingSenderId: '1089917254734',
     projectId:         'phlakesfabric',
     authDomain:        'phlakesfabric.firebaseapp.com',

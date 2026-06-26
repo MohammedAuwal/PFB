@@ -1200,7 +1200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 24),
                   Center(
                     child: Text(
-                      'Phlakes Fabrics · Version 1.0.0',
+                      'Phlakes Fabrics · Version 1.2.0',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         color:    colors.textSecondary.withOpacity(0.6),

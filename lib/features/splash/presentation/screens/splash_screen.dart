@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pfb/config/routes/route_names.dart';
 import 'package:pfb/core/routing/app_router.dart';
 import 'package:pfb/core/theme/app_theme.dart';
+import 'package:pfb/services/firebase_auth_service.dart';
 import 'package:pfb/services/firebase_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -132,6 +134,21 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _bootstrap() async {
     final firebaseService = FirebaseService();
+
+    // ── WEB: Process any pending Google Sign-In redirect result ──────────
+    //  After `signInWithRedirect` the browser navigates to Google and back.
+    //  When the app reloads, this call retrieves the credential so
+    //  `currentUser` is accurate for the checks below.
+    if (kIsWeb) {
+      try {
+        final authService = FirebaseAuthService();
+        await authService.handleRedirectResult();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('🔐 Bootstrap | redirect result error: $e');
+        }
+      }
+    }
 
     unawaited(firebaseService.seedDefaultAppSettingsSafely());
     unawaited(firebaseService.seedDefaultCategoriesIfMissingSafely());

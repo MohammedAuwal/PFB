@@ -1275,11 +1275,11 @@ class _ProductListScreenState extends State<ProductListScreen>
             ),
           ),
           const SizedBox(width: 12),
-          // Fabric Consultation — black gradient
+          // Fabric Teloring Service — black gradient
           Expanded(
             child: _MainActionCard(
-              title:    'Fabric\nConsultation',
-              subtitle: 'Expert styling advice',
+              title:    'Teloring\nService',
+              subtitle: 'Expert styling',
               icon:     Icons.content_cut_rounded,
               gradientColors: const [
                 Color(0xFF111111),
@@ -1458,7 +1458,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                     const SizedBox(height: 10),
                     Text(
                       _isGuest
-                          ? 'Sign in & get 10% off your first fabric order!'
+                          ? 'Sign in & get 25% off your first fabric order!'
                           : 'Premium Ankara & Lace — Up to 30% OFF this week!',
                       style: GoogleFonts.poppins(
                         color:      Colors.white,
@@ -1982,7 +1982,7 @@ class _ProductListScreenState extends State<ProductListScreen>
                     ),
                   ),
                   Text(
-                    'On all orders above ₦25,000 within Lagos',
+                    'On all orders above ₦25,000 within Ilorin',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color:    colors.textSecondary,
